@@ -223,6 +223,7 @@ async def think_wrapper(interaction, query):
 async def process_query(request: QueryRequest):
     global is_generating, query_resp_history
     logger.info(f"Processing query: {request.query}")
+    logger.info("Processing start begin")
     query_resp = QueryResponse(
         done="false",
         answer="",
@@ -297,4 +298,5 @@ if __name__ == "__main__":
         port = int(envport)
     else:
         port = 7777
+    # uvicorn.run("langsistance.api:api", host="0.0.0.0", port=7777, reload=True)
     uvicorn.run(api, host="0.0.0.0", port=7777)
