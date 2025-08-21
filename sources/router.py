@@ -24,7 +24,7 @@ class AgentRouter:
         self.agents = agents
         self.logger = Logger("router.log")
         self.lang_analysis = LanguageUtility(supported_language=supported_language)
-        self.pipelines = self.load_pipelines()
+        # self.pipelines = self.load_pipelines()
         self.talk_classifier = self.load_llm_router()
         self.complexity_classifier = self.load_llm_router()
         self.learn_few_shots_tasks()
@@ -376,18 +376,18 @@ class AgentRouter:
         Returns:
             str: The selected label
         """
-        if len(text) <= 8:
-            return "talk"
-        result_bart = self.pipelines['bart'](text, labels)
-        result_llm_router = self.llm_router(text)
-        bart, confidence_bart = result_bart['labels'][0], result_bart['scores'][0]
-        llm_router, confidence_llm_router = result_llm_router[0], result_llm_router[1]
-        final_score_bart = confidence_bart / (confidence_bart + confidence_llm_router)
-        final_score_llm = confidence_llm_router / (confidence_bart + confidence_llm_router)
-        self.logger.info(f"Routing Vote for text {text}: BART: {bart} ({final_score_bart}) LLM-router: {llm_router} ({final_score_llm})")
-        if log_confidence:
-            pretty_print(f"Agent choice -> BART: {bart} ({final_score_bart}) LLM-router: {llm_router} ({final_score_llm})")
-        return bart if final_score_bart > final_score_llm else llm_router
+        # if len(text) <= 8:
+        #     return "talk"
+        # result_bart = self.pipelines['bart'](text, labels)
+        # result_llm_router = self.llm_router(text)
+        # bart, confidence_bart = result_bart['labels'][0], result_bart['scores'][0]
+        # llm_router, confidence_llm_router = result_llm_router[0], result_llm_router[1]
+        # final_score_bart = confidence_bart / (confidence_bart + confidence_llm_router)
+        # final_score_llm = confidence_llm_router / (confidence_bart + confidence_llm_router)
+        # self.logger.info(f"Routing Vote for text {text}: BART: {bart} ({final_score_bart}) LLM-router: {llm_router} ({final_score_llm})")
+        # if log_confidence:
+        #     pretty_print(f"Agent choice -> BART: {bart} ({final_score_bart}) LLM-router: {llm_router} ({final_score_llm})")
+        # return bart if final_score_bart > final_score_llm else llm_router
     
     def find_first_sentence(self, text: str) -> str:
         first_sentence = None

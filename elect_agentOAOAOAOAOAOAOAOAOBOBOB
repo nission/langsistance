@@ -1,0 +1,51 @@
+[1mdiff --git a/sources/router.py b/sources/router.py[m
+[1mindex 61d9808..6bdb515 100644[m
+[1m--- a/sources/router.py[m
+[1m+++ b/sources/router.py[m
+[36m@@ -24,7 +24,7 @@[m [mclass AgentRouter:[m
+         self.agents = agents[m
+         self.logger = Logger("router.log")[m
+         self.lang_analysis = LanguageUtility(supported_language=supported_language)[m
+[31m-        self.pipelines = self.load_pipelines()[m
+[32m+[m[32m        # self.pipelines = self.load_pipelines()[m
+         self.talk_classifier = self.load_llm_router()[m
+         self.complexity_classifier = self.load_llm_router()[m
+         self.learn_few_shots_tasks()[m
+[36m@@ -376,18 +376,18 @@[m [mclass AgentRouter:[m
+         Returns:[m
+             str: The selected label[m
+         """[m
+[31m-        if len(text) <= 8:[m
+[31m-            return "talk"[m
+[31m-        result_bart = self.pipelines['bart'](text, labels)[m
+[31m-        result_llm_router = self.llm_router(text)[m
+[31m-        bart, confidence_bart = result_bart['labels'][0], result_bart['scores'][0][m
+[31m-        llm_router, confidence_llm_router = result_llm_router[0], result_llm_router[1][m
+[31m-        final_score_bart = confidence_bart / (confidence_bart + confidence_llm_router)[m
+[31m-        final_score_llm = confidence_llm_router / (confidence_bart + confidence_llm_router)[m
+[31m-        self.logger.info(f"Routing Vote for text {text}: BART: {bart} ({final_score_bart}) LLM-router: {llm_router} ({final_score_llm})")[m
+[31m-        if log_confidence:[m
+[31m-            pretty_print(f"Agent choice -> BART: {bart} ({final_score_bart}) LLM-router: {llm_router} ({final_score_llm})")[m
+[31m-        return bart if final_score_bart > final_score_llm else llm_router[m
+[32m+[m[32m        # if len(text) <= 8:[m
+[32m+[m[32m        #     return "talk"[m
+[32m+[m[32m        # result_bart = self.pipelines['bart'](text, labels)[m
+[32m+[m[32m        # result_llm_router = self.llm_router(text)[m
+[32m+[m[32m        # bart, confidence_bart = result_bart['labels'][0], result_bart['scores'][0][m
+[32m+[m[32m        # llm_router, confidence_llm_router = result_llm_router[0], result_llm_router[1][m
+[32m+[m[32m        # final_score_bart = confidence_bart / (confidence_bart + confidence_llm_router)[m
+[32m+[m[32m        # final_score_llm = confidence_llm_router / (confidence_bart + confidence_llm_router)[m
+[32m+[m[32m        # self.logger.info(f"Routing Vote for text {text}: BART: {bart} ({final_score_bart}) LLM-router: {llm_router} ({final_score_llm})")[m
+[32m+[m[32m        # if log_confidence:[m
+[32m+[m[32m        #     pretty_print(f"Agent choice -> BART: {bart} ({final_score_bart}) LLM-router: {llm_router} ({final_score_llm})")[m
+[32m+[m[32m        # return bart if final_score_bart > final_score_llm else llm_router[m
+     [m
+     def find_first_sentence(self, text: str) -> str:[m
+         first_sentence = None[m
+[36m@@ -525,5 +525,5 @@[m [mif __name__ == "__main__":[m
+     ][m
+     for text in texts:[m
+         print("Input text:", text)[m
+[31m-        agent = router.select_agent(text)[m
+[32m+[m[32m        # agent = router.select_agent(text)[m
+         print()[m

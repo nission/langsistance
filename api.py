@@ -199,9 +199,10 @@ async def get_latest_answer():
 
 async def think_wrapper(interaction, query):
     try:
+        success = False   #断点
         interaction.last_query = query
         logger.info("Agents request is being processed")
-        success = await interaction.think()
+        # success = await interaction.think()
         if not success:
             interaction.last_answer = "Error: No answer from agent"
             interaction.last_reasoning = "Error: No reasoning from agent"
