@@ -470,6 +470,18 @@ class AgentRouter:
         self.logger.error("No agent selected.")
         return None
 
+    def build_agent(self, text: str) -> Agent:
+        """
+        build the agent based on the knowledge from knowledge base.
+        Args:
+            text (str): The text to select the agent from
+        Returns:
+            Agent: The built agent
+        """
+
+
+        return None
+
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     agents = [
