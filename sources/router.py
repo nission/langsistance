@@ -472,13 +472,13 @@ class AgentRouter:
         self.logger.error("No agent selected.")
         return None
 
-    def build_agent(self, text: str) -> Agent:
+    def build_agent(self, text: str) -> tuple[Agent, str]:
         """
         build the agent based on the knowledge from knowledge base.
         Args:
             text (str): The text to select the agent from
         Returns:
-            Agent: The built agent
+            Agent: The built agent and the modified text with knowledge context
         """
         
         try:
@@ -502,21 +502,35 @@ class AgentRouter:
                 pretty_print(f"Found matching knowledge: {best_match['question']}", color="success")
                 self.logger.info(f"Found matching knowledge: {best_match['question']}")
                 
-                # 这里可以根据匹配的知识项构建或选择特定的Agent
-                # 例如，可以根据知识项中的参数选择不同的Agent
+                # 将匹配到的知识内容追加到text中
+                modified_text = text
                 
-                # 如果知识项中包含agent_type参数，可以据此选择Agent
-                if 'params' in best_match:
-                    agent_type = best_match['params']['agent_type']
+                # 追加问题
+                if 'question' in best_match:
+                    modified_text += f"\n\n相关问题: {best_match['question']}"
+                
+                # 追加答案
+                if 'answer' in best_match:
+                    modified_text += f"\n\n相关答案: {best_match['answer']}"
+                
+                # 追加工具信息
+                if 'params' in best_match and 'tools' in best_match['params']:
+                    tools_str = ", ".join(best_match['params']['tools']) if isinstance(best_match['params']['tools'], list) else str(best_match['params']['tools'])
+                    modified_text += f"\n\n可用工具: {tools_str}"
+                
+                pretty_print(f"Added knowledge context to query", color="success")
+                self.logger.info(f"Added knowledge context to query")
+
+                return self.agents[0], modified_text
             
-            # 如果没有找到匹配的知识或没有指定agent_type，则使用默认的选择方法
+            # 如果没有找到匹配的知识，则使用默认的选择方法
             pretty_print("No matching knowledge found, using default agent selection.", color="warning")
-            return None
+            return self.agents[0], text
         except Exception as e:
             pretty_print(f"Error building agent from knowledge base: {str(e)}", color="failure")
             self.logger.error(f"Error building agent from knowledge base: {str(e)}")
             # 出错时回退到默认的选择方法
-            return None
+            return self.agents[0], text
 
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

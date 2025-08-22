@@ -131,7 +131,7 @@ def initialize_system():
         GeneralAgent(
             name="General",
             prompt_path=f"prompts/{personality_folder}/general_agent.txt",
-            provider=provider, verbose=False, browser=browser
+            provider=provider, verbose=False
         )
     ]
     logger.info("Agents initialized")
