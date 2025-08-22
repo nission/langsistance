@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uuid
 
+from sources.agents.general_agent import GeneralAgent
 from sources.llm_provider import Provider
 from sources.interaction import Interaction
 from sources.agents import CasualAgent, CoderAgent, FileAgent, PlannerAgent, BrowserAgent
@@ -127,6 +128,11 @@ def initialize_system():
         #     prompt_path=f"prompts/{personality_folder}/planner_agent.txt",
         #     provider=provider, verbose=False, browser=browser
         # )
+        GeneralAgent(
+            name="General",
+            prompt_path=f"prompts/{personality_folder}/general_agent.txt",
+            provider=provider, verbose=False, browser=browser
+        )
     ]
     logger.info("Agents initialized")
 

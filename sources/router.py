@@ -15,6 +15,8 @@ from sources.agents.browser_agent import BrowserAgent
 from sources.language import LanguageUtility
 from sources.utility import pretty_print, animate_thinking, timer_decorator
 from sources.logger import Logger
+from sources.knowledge.knowledge import get_embedding, search_knowledge_base
+
 
 class AgentRouter:
     """
@@ -478,9 +480,43 @@ class AgentRouter:
         Returns:
             Agent: The built agent
         """
-
-
-        return None
+        
+        try:
+            # 获取用户ID，这里假设使用默认用户ID，您可能需要根据实际情况修改
+            user_id = "111111111"
+            
+            # 获取文本的嵌入向量
+            query_embedding = get_embedding(text)
+            
+            # 从知识库中检索最匹配的知识
+            search_results = search_knowledge_base(
+                user_id,
+                query_embedding,
+                top_k=1,  # 只获取最匹配的一条
+                threshold=0.5  # 设置相似度阈值
+            )
+            
+            if search_results:
+                # 获取最匹配的知识项
+                best_match = search_results[0]
+                pretty_print(f"Found matching knowledge: {best_match['question']}", color="success")
+                self.logger.info(f"Found matching knowledge: {best_match['question']}")
+                
+                # 这里可以根据匹配的知识项构建或选择特定的Agent
+                # 例如，可以根据知识项中的参数选择不同的Agent
+                
+                # 如果知识项中包含agent_type参数，可以据此选择Agent
+                if 'params' in best_match:
+                    agent_type = best_match['params']['agent_type']
+            
+            # 如果没有找到匹配的知识或没有指定agent_type，则使用默认的选择方法
+            pretty_print("No matching knowledge found, using default agent selection.", color="warning")
+            return None
+        except Exception as e:
+            pretty_print(f"Error building agent from knowledge base: {str(e)}", color="failure")
+            self.logger.error(f"Error building agent from knowledge base: {str(e)}")
+            # 出错时回退到默认的选择方法
+            return None
 
 if __name__ == "__main__":
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

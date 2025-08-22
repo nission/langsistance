@@ -173,7 +173,6 @@ async def add_knowledge_item(item: KnowledgeItem):
         )
 
 
-@app.post("/query")
 async def query_knowledge_base(query: UserQuestion):
     """查询用户知识库并返回答案"""
     try:
@@ -191,13 +190,14 @@ async def query_knowledge_base(query: UserQuestion):
         # 生成答案
         if search_results:
             # 使用检索到的内容生成答案
-            answer = generate_answer_with_context(query.question, search_results)
+            # answer = generate_answer_with_context(query.question, search_results)
 
-            return {
-                "answer": answer,
-                "sources": search_results,
-                "user_id": query.user_id
-            }
+            # return {
+            #     "answer": answer,
+            #     "sources": search_results,
+            #     "user_id": query.user_id
+            # }
+            return search_results[0]
         else:
             # 如果没有找到相关内容，直接使用 OpenAI 生成答案
             try:
@@ -224,10 +224,10 @@ async def query_knowledge_base(query: UserQuestion):
                 }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"查询失败: {str(e)}")
+        logger.error(f"Error in query_knowledge_base: {str(e)}")
+        raise e
 
 
-@app.get("/user/{user_id}/knowledge")
 async def list_user_knowledge(user_id: str):
     """列出用户知识库中的所有问答对"""
     try:
@@ -247,10 +247,10 @@ async def list_user_knowledge(user_id: str):
             "items": items
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取知识库失败: {str(e)}")
+        logger.error(f"Error in list_user_knowledge: {str(e)}")
+        raise e
 
 
-@app.delete("/user/{user_id}/knowledge/{item_id}")
 async def delete_knowledge_item(user_id: str, item_id: str):
     """从用户知识库中删除指定的问答对"""
     try:
@@ -268,10 +268,5 @@ async def delete_knowledge_item(user_id: str, item_id: str):
 
         return {"success": True, "message": "知识项删除成功"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除知识项失败: {str(e)}")
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+        logger.error(f"Error in delete_knowledge_item: {str(e)}")
+        raise e
