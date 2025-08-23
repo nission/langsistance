@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
 import axios from "axios";
 import "./App.css";
 import { ThemeToggle } from "./components/ThemeToggle";
-import { ResizableLayout } from "./components/ResizableLayout";
 import faviconPng from "./logo.png";
+import Sidebar from "./components/Sidebar";
+import ChatInterface from "./components/ChatInterface";
+import KnowledgeBase from "./components/KnowledgeBase";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 console.log("Using backend URL:", BACKEND_URL);
@@ -14,11 +15,11 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [currentView, setCurrentView] = useState("blocks");
   const [responseData, setResponseData] = useState(null);
   const [isOnline, setIsOnline] = useState(false);
   const [status, setStatus] = useState("Agents ready");
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
+  const [activeTab, setActiveTab] = useState("chat");
   const messagesEndRef = useRef(null);
 
   const fetchLatestAnswer = useCallback(async () => {
@@ -60,7 +61,6 @@ function App() {
     const intervalId = setInterval(() => {
       checkHealth();
       fetchLatestAnswer();
-      fetchScreenshot();
     }, 3000);
     return () => clearInterval(intervalId);
   }, [fetchLatestAnswer]);
@@ -76,36 +76,7 @@ function App() {
     }
   };
 
-  const fetchScreenshot = async () => {
-    try {
-      const timestamp = new Date().getTime();
-      const res = await axios.get(
-        `${BACKEND_URL}/screenshots/updated_screen.png?timestamp=${timestamp}`,
-        {
-          responseType: "blob",
-        }
-      );
-      console.log("Screenshot fetched successfully");
-      const imageUrl = URL.createObjectURL(res.data);
-      setResponseData((prev) => {
-        if (prev?.screenshot && prev.screenshot !== "placeholder.png") {
-          URL.revokeObjectURL(prev.screenshot);
-        }
-        return {
-          ...prev,
-          screenshot: imageUrl,
-          screenshotTimestamp: new Date().getTime(),
-        };
-      });
-    } catch (err) {
-      console.error("Error fetching screenshot:", err);
-      setResponseData((prev) => ({
-        ...prev,
-        screenshot: "placeholder.png",
-        screenshotTimestamp: new Date().getTime(),
-      }));
-    }
-  };
+  // 移除了Computer View相关的函数
 
   const normalizeAnswer = (answer) => {
     return answer
@@ -192,13 +163,7 @@ function App() {
     }
   };
 
-  const handleGetScreenshot = async () => {
-    try {
-      setCurrentView("screenshot");
-    } catch (err) {
-      setError("Browser not in use");
-    }
-  };
+  // 移除了Computer View相关的函数
 
   return (
     <div className="app">
@@ -240,175 +205,26 @@ function App() {
         </div>
       </header>
       <main className="main">
-        <ResizableLayout initialLeftWidth={50}>
-          <div className="chat-section">
-            <h2>Chat Interface</h2>
-            <div className="messages">
-              {messages.length === 0 ? (
-                <p className="placeholder">
-                  No messages yet. Type below to start!
-                </p>
-              ) : (
-                messages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`message ${
-                      msg.type === "user"
-                        ? "user-message"
-                        : msg.type === "agent"
-                        ? "agent-message"
-                        : "error-message"
-                    }`}
-                  >
-                    <div className="message-header">
-                      {msg.type === "agent" && (
-                        <span className="agent-name">{msg.agentName}</span>
-                      )}
-                      {msg.type === "agent" &&
-                        msg.reasoning &&
-                        expandedReasoning.has(index) && (
-                          <div className="reasoning-content">
-                            <ReactMarkdown>{msg.reasoning}</ReactMarkdown>
-                          </div>
-                        )}
-                      {msg.type === "agent" && (
-                        <button
-                          className="reasoning-toggle"
-                          onClick={() => toggleReasoning(index)}
-                          title={
-                            expandedReasoning.has(index)
-                              ? "Hide reasoning"
-                              : "Show reasoning"
-                          }
-                        >
-                          {expandedReasoning.has(index) ? "▼" : "▶"} Reasoning
-                        </button>
-                      )}
-                    </div>
-                    <div className="message-content">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-            {isOnline && <div className="loading-animation">{status}</div>}
-            {!isLoading && !isOnline && (
-              <p className="loading-animation">
-                System offline. Deploy backend first.
-              </p>
-            )}
-            <form onSubmit={handleSubmit} className="input-form">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Type your query..."
-                disabled={isLoading}
-              />
-              <div className="action-buttons">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="icon-button"
-                  aria-label="Send message"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleStop}
-                  className="icon-button stop-button"
-                  aria-label="Stop processing"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <rect
-                      x="6"
-                      y="6"
-                      width="12"
-                      height="12"
-                      fill="currentColor"
-                      rx="2"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <div className="computer-section">
-            <h2>Computer View</h2>
-            <div className="view-selector">
-              <button
-                className={currentView === "blocks" ? "active" : ""}
-                onClick={() => setCurrentView("blocks")}
-              >
-                Editor View
-              </button>
-              <button
-                className={currentView === "screenshot" ? "active" : ""}
-                onClick={
-                  responseData?.screenshot
-                    ? () => setCurrentView("screenshot")
-                    : handleGetScreenshot
-                }
-              >
-                Browser View
-              </button>
-            </div>
-            <div className="content">
-              {error && <p className="error">{error}</p>}
-              {currentView === "blocks" ? (
-                <div className="blocks">
-                  {responseData &&
-                  responseData.blocks &&
-                  Object.values(responseData.blocks).length > 0 ? (
-                    Object.values(responseData.blocks).map((block, index) => (
-                      <div key={index} className="block">
-                        <p className="block-tool">Tool: {block.tool_type}</p>
-                        <pre>{block.block}</pre>
-                        <p className="block-feedback">
-                          Feedback: {block.feedback}
-                        </p>
-                        {block.success ? (
-                          <p className="block-success">Success</p>
-                        ) : (
-                          <p className="block-failure">Failure</p>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="block">
-                      <p className="block-tool">Tool: No tool in use</p>
-                      <pre>No file opened</pre>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="screenshot">
-                  <img
-                    src={responseData?.screenshot || "placeholder.png"}
-                    alt="Screenshot"
-                    onError={(e) => {
-                      e.target.src = "placeholder.png";
-                      console.error("Failed to load screenshot");
-                    }}
-                    key={responseData?.screenshotTimestamp || "default"}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </ResizableLayout>
+        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="content-area">
+          {activeTab === "chat" ? (
+            <ChatInterface 
+              messages={messages}
+              query={query}
+              setQuery={setQuery}
+              isLoading={isLoading}
+              isOnline={isOnline}
+              status={status}
+              expandedReasoning={expandedReasoning}
+              toggleReasoning={toggleReasoning}
+              handleSubmit={handleSubmit}
+              handleStop={handleStop}
+              messagesEndRef={messagesEndRef}
+            />
+          ) : (
+            <KnowledgeBase />
+          )}
+        </div>
       </main>
     </div>
   );
