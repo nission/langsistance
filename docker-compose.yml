@@ -1,4 +1,4 @@
-version: '3'
+#version: '3'
 
 services:
   redis:
@@ -78,7 +78,7 @@ services:
     ports:
       - ${BACKEND_PORT:-7777}:${BACKEND_PORT:-7777}
 #      - ${OLLAMA_PORT:-11434}:${OLLAMA_PORT:-11434}
-      - ${LM_STUDIO_PORT:-1234}:${LM_STUDIO_PORT:-1234}
+#      - ${LM_STUDIO_PORT:-1234}:${LM_STUDIO_PORT:-1234}
 #      - ${CUSTOM_ADDITIONAL_LLM_PORT:-8000}:${CUSTOM_ADDITIONAL_LLM_PORT:-8000}
     volumes:
       - ./:/app

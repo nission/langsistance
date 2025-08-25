@@ -10,6 +10,9 @@ import requests
 from dotenv import load_dotenv
 from ollama import Client as OllamaClient
 from openai import OpenAI
+from langchain_openai import ChatOpenAI
+from langchain.agents import AgentType, initialize_agent, Tool
+from langchain.schema import SystemMessage, HumanMessage
 
 from sources.logger import Logger
 from sources.utility import pretty_print, animate_thinking
@@ -115,7 +118,7 @@ class Provider:
         except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
             return False
 
-    def server_fn(self, history, verbose=False):
+    def server_fn(self, tools, history, verbose=False):
         """
         Use a remote server with LLM to generate text.
         """
@@ -155,7 +158,7 @@ class Provider:
             raise e
         return thought
 
-    def ollama_fn(self, history, verbose=False):
+    def ollama_fn(self, tools, history, verbose=False):
         """
         Use local or remote Ollama server to generate text.
         """
@@ -190,7 +193,7 @@ class Provider:
 
         return thought
 
-    def huggingface_fn(self, history, verbose=False):
+    def huggingface_fn(self, tools, history, verbose=False):
         """
         Use huggingface to generate text.
         """
@@ -206,27 +209,35 @@ class Provider:
         thought = completion.choices[0].message
         return thought.content
 
-    def openai_fn(self, history, verbose=False):
+    def openai_fn(self, tools, history, verbose=False):
         """
         Use openai to generate text.
         """
-        base_url = self.server_ip
-        if self.is_local and self.in_docker:
-            try:
-                host, port = base_url.split(':')
-            except Exception as e:
-                port = "8000"
-            client = OpenAI(api_key=self.api_key, base_url=f"{self.internal_url}:{port}")
-        elif self.is_local:
-            client = OpenAI(api_key=self.api_key, base_url=f"http://{base_url}")
-        else:
-            client = OpenAI(api_key=self.api_key)
+        client = OpenAI(api_key=self.api_key)
+        llm = ChatOpenAI(
+            self.model,
+            openai_api_key=self.api_key,
+            temperature=0
+        )
+
+        messages = [
+            SystemMessage(content=history["system"]),
+            HumanMessage(content=history["user"])
+        ]
 
         try:
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=history,
+            agent = initialize_agent(
+                tools=tools,
+                llm=llm,
+                agent=AgentType.OPENAI_FUNCTIONS,  # 使用 OpenAI 函数调用
+                verbose=verbose  # 显示详细执行过程
             )
+
+            response = agent.run(messages)
+            # response = client.chat.completions.create(
+            #     model=self.model,
+            #     messages=history,
+            # )
             if response is None:
                 raise Exception("OpenAI response is empty.")
             thought = response.choices[0].message.content
@@ -236,7 +247,7 @@ class Provider:
         except Exception as e:
             raise Exception(f"OpenAI API error: {str(e)}") from e
 
-    def anthropic_fn(self, history, verbose=False):
+    def anthropic_fn(self, tools, history, verbose=False):
         """
         Use Anthropic to generate text.
         """
@@ -268,7 +279,7 @@ class Provider:
         except Exception as e:
             raise Exception(f"Anthropic API error: {str(e)}") from e
 
-    def google_fn(self, history, verbose=False):
+    def google_fn(self, tools, history, verbose=False):
         """
         Use google gemini to generate text.
         """
@@ -291,7 +302,7 @@ class Provider:
         except Exception as e:
             raise Exception(f"GOOGLE API error: {str(e)}") from e
 
-    def together_fn(self, history, verbose=False):
+    def together_fn(self, tools, history, verbose=False):
         """
         Use together AI for completion
         """
@@ -314,7 +325,7 @@ class Provider:
         except Exception as e:
             raise Exception(f"Together AI API error: {str(e)}") from e
 
-    def deepseek_fn(self, history, verbose=False):
+    def deepseek_fn(self, tools, history, verbose=False):
         """
         Use deepseek api to generate text.
         """
@@ -334,7 +345,7 @@ class Provider:
         except Exception as e:
             raise Exception(f"Deepseek API error: {str(e)}") from e
 
-    def lm_studio_fn(self, history, verbose=False):
+    def lm_studio_fn(self, tools, history, verbose=False):
         """
         Use local lm-studio server to generate text.
         """
@@ -389,7 +400,7 @@ class Provider:
             raise Exception(f"Unexpected error: {str(e)}") from e
         return thought
 
-    def openrouter_fn(self, history, verbose=False):
+    def openrouter_fn(self, tools, history, verbose=False):
         """
         Use OpenRouter API to generate text.
         """
@@ -412,7 +423,7 @@ class Provider:
         except Exception as e:
             raise Exception(f"OpenRouter API error: {str(e)}") from e
 
-    def dsk_deepseek(self, history, verbose=False):
+    def dsk_deepseek(self, tools, history, verbose=False):
         """
         Use: xtekky/deepseek4free
         For free api. Api key should be set to DSK_DEEPSEEK_API_KEY
@@ -448,7 +459,7 @@ class Provider:
             raise APIError(f"API error occurred: {str(e)}") from e
         return None
 
-    def test_fn(self, history, verbose=True):
+    def test_fn(self, tools, history, verbose=True):
         """
         This function is used to conduct tests.
         """

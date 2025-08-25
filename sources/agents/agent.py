@@ -40,6 +40,7 @@ class Agent():
         self.current_directory = os.getcwd()
         self.llm = provider 
         self.memory = None
+        self.tools = None
         self.tools = {}
         self.blocks_result = []
         self.success = True

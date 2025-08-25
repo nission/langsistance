@@ -1,11 +1,14 @@
 import os
 import asyncio
+from typing import Dict, Any
 
 from sources.utility import pretty_print, animate_thinking
 from sources.agents.agent import Agent
 from sources.tools.mcpFinder import MCP_finder
 from sources.memory import Memory
 
+from mcp_use.client import MCPClient
+from mcp_use.adapters import LangChainAdapter
 
 class GeneralAgent(Agent):
 
@@ -27,6 +30,7 @@ class GeneralAgent(Agent):
                                 memory_compression=False,
                                 model_provider=provider.get_model_name())
         self.enabled = True
+        self.knowledgeTool = {}
     
     def get_api_keys(self) -> dict:
         """
@@ -40,6 +44,14 @@ class GeneralAgent(Agent):
             "mcp_finder": api_key_mcp_finder
         }
     
+    def set_knowledge_tool(self, knowledge_tool: Dict[str, Any]) -> None:
+        """
+        设置知识工具字典
+        Args:
+            knowledge_tool (Dict[str, Any]): 知识工具字典
+        """
+        self.knowledgeTool = knowledge_tool
+    
     def expand_prompt(self, prompt):
         """
         Expands the prompt with the tools available.
@@ -50,12 +62,35 @@ class GeneralAgent(Agent):
         {tools_str}
         """
         return prompt
-    
+    def generate_system_prompt(self) -> str:
+        """
+        生成系统提示
+        """
+        system_prompt = f"""
+        你是一个MCP智能助手，你的任务是根据用户的问题和上下文，使用MCP服务器提供的工具来解决问题。
+        你可以使用的MCP服务器是：
+        {self.knowledgeTool["params"]["tool"]["server_config"]}
+        工具调用完成后基于结果给出最终答案。
+        如果不需要使用工具，请直接回答用户的问题。
+        """
+        return self.expand_prompt(self.memory.get_system_prompt())
+
+    async def get_tools(self) -> dict:
+
+        client = MCPClient.from_config_file("browser_mcp.json")
+        adapter = LangChainAdapter()
+
+        tools = await adapter.create_tools(client)
+        return tools
+
     async def process(self, prompt, speech_module) -> str:
         if self.enabled == False:
             return "MCP Agent is disabled."
-        prompt = self.expand_prompt(prompt)
-        self.memory.push('user', prompt)
+        user_prompt = self.expand_prompt(prompt)
+        system_prompt = self.generate_system_prompt()
+        self.memory.push('user', user_prompt)
+        self.memory.push('system', system_prompt)
+        self.tools = await self.get_tools()
         working = True
         while working == True:
             animate_thinking("Thinking...", color="status")

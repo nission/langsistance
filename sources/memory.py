@@ -6,7 +6,6 @@ import sys
 import json
 from typing import List, Tuple, Type, Dict
 import torch
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import configparser
 
 from sources.utility import timer_decorator, pretty_print, animate_thinking

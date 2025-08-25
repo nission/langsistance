@@ -55,7 +55,10 @@ setup(
         "sentencepiece>=0.2.0",
         "openai",
         "sniffio",
-        "tqdm>4"
+        "tqdm>4",
+        "mcp-use>=1.3.0",
+        "langchain>=0.3.27",
+        "langchain-openai>=0.3.31"
     ],
     extras_require={
         "chinese": [

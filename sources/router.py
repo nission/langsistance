@@ -502,6 +502,7 @@ class AgentRouter:
                 pretty_print(f"Found matching knowledge: {best_match['question']}", color="success")
                 self.logger.info(f"Found matching knowledge: {best_match['question']}")
                 
+                self.agents[0].sep-t_knowledge_tool(best_match)
                 # 将匹配到的知识内容追加到text中
                 modified_text = text
                 
