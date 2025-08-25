@@ -23,6 +23,26 @@ services:
     networks:
       - agentic-seek-net
 
+  mysql:
+    container_name: langsistance_db
+    profiles: [ "core", "full" ]
+    image: mysql:8.0.33
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+      - ./mysql/config:/etc/mysql/conf.d
+    networks:
+      - agentic-seek-net
+
   searxng:
     container_name: searxng
     profiles: ["core", "full"]
