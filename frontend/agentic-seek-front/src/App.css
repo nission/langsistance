@@ -264,10 +264,12 @@ body {
 
 .main {
   flex: 1;
-  padding: 1rem 2rem;
+  padding: 1.5rem;
   overflow: hidden;
   display: flex;
   flex-direction: row;
+  gap: 1.5rem;
+  background-color: var(--background);
 }
 
 .content-area {
@@ -275,6 +277,16 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background-color: var(--card);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+/* 页面切换过渡效果 */
+.content-area > div {
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .section-tabs {

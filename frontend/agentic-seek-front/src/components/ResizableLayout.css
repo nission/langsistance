@@ -13,14 +13,13 @@
 }
 
 .resize-handle {
-  width: 8px;
+  width: 12px;
   background-color: transparent;
   cursor: col-resize;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 2px;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.3s ease;
   position: relative;
   flex-shrink: 0;
 }
@@ -30,16 +29,18 @@
 }
 
 .resize-handle-line {
-  width: 2px;
-  height: 40px;
+  width: 3px;
+  height: 60px;
   background-color: var(--border);
-  border-radius: 1px;
-  transition: all 0.2s ease;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .resize-handle:hover .resize-handle-line {
   background-color: var(--accent-foreground);
-  height: 60px;
+  height: 80px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .resizable-container.dragging .resize-handle {
@@ -49,6 +50,7 @@
 .resizable-container.dragging .resize-handle-line {
   background-color: var(--accent-foreground);
   height: 100vh;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 /* Mobile responsiveness */

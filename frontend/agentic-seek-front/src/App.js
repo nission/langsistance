@@ -208,7 +208,7 @@ function App() {
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
         <div className="content-area">
           {activeTab === "chat" ? (
-            <ChatInterface 
+            <ChatInterface
               messages={messages}
               query={query}
               setQuery={setQuery}
