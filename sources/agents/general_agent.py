@@ -73,7 +73,7 @@ class GeneralAgent(Agent):
         工具调用完成后基于结果给出最终答案。
         如果不需要使用工具，请直接回答用户的问题。
         """
-        return self.expand_prompt(self.memory.get_system_prompt())
+        return self.expand_prompt(system_prompt)
 
     async def get_tools(self) -> dict:
 
