@@ -1,7 +1,6 @@
-import os
-import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, List
 
+from sources.knowledge.knowledge import get_user_knowledge
 from sources.utility import pretty_print, animate_thinking
 from sources.agents.agent import Agent
 from sources.tools.mcpFinder import MCP_finder
@@ -9,6 +8,9 @@ from sources.memory import Memory
 
 from mcp_use.client import MCPClient
 from mcp_use.adapters import LangChainAdapter
+
+import pymysql
+import os
 
 class GeneralAgent(Agent):
 
@@ -86,6 +88,7 @@ class GeneralAgent(Agent):
     async def process(self,user_id, prompt, speech_module) -> str:
         if not self.enabled:
             return "MCP Agent is disabled."
+        self.knowledgeTool = get_user_knowledge(user_id)
         user_prompt = self.expand_prompt(prompt)
         system_prompt = self.generate_system_prompt()
         self.memory.push('user', user_prompt)

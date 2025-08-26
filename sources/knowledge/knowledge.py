@@ -8,6 +8,9 @@ from pydantic import BaseModel
 from sklearn.metrics.pairwise import cosine_similarity
 
 from sources.logger import Logger
+import pymysql
+
+from sources.utility import pretty_print
 
 # 设置 OpenAI API 密钥
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -270,3 +273,56 @@ async def delete_knowledge_item(user_id: str, item_id: str):
     except Exception as e:
         logger.error(f"Error in delete_knowledge_item: {str(e)}")
         raise e
+
+def get_db_connection():
+    """创建并返回数据库连接"""
+    db_config = {
+        'host': os.getenv('DB_HOST', 'localhost'),
+        'user': os.getenv('DB_USER', 'root'),
+        'password': os.getenv('DB_PASSWORD', ''),
+        'database': os.getenv('DB_NAME', 'langsistance'),
+        'charset': 'utf8mb4'
+    }
+    return pymysql.connect(**db_config)
+
+def get_user_knowledge(user_id: str) -> List[Dict]:
+    """
+    根据用户ID从数据库查询有效的知识记录
+
+    Args:
+        user_id (str): 用户ID
+
+    Returns:
+        List[Dict]: 用户的知识记录列表
+    """
+    # 这里需要实现数据库连接和查询逻辑
+    # 参考api.py中的get_db_connection方法和查询逻辑
+
+    try:
+        connection = get_db_connection()
+
+        try:
+            with connection.cursor as cursor:
+                # 查询用户有效的知识记录 (status=1表示有效)
+                # 包括用户自己的知识和公开的知识
+                query_sql = """
+                            SELECT id, \
+                                   userId, \
+                                   question, \
+                                   description, \
+                                   answer, public, model_name, tool_id, params, created_at, updated_at
+                            FROM knowledge
+                            WHERE status = %s
+                               OR userId = %s)
+                            ORDER BY updated_at DESC \
+                            """
+
+                cursor.execute(query_sql, (1, user_id))
+                results = cursor.fetchall()
+                return results
+        finally:
+            connection.close()
+
+    except Exception as e:
+        pretty_print(f"Error querying user knowledge: {str(e)}", color="error")
+        return []

@@ -27,10 +27,10 @@ class AgentRouter:
         self.logger = Logger("router.log")
         self.lang_analysis = LanguageUtility(supported_language=supported_language)
         # self.pipelines = self.load_pipelines()
-        self.talk_classifier = self.load_llm_router()
-        self.complexity_classifier = self.load_llm_router()
-        self.learn_few_shots_tasks()
-        self.learn_few_shots_complexity()
+        # self.talk_classifier = self.load_llm_router()
+        # self.complexity_classifier = self.load_llm_router()
+        # self.learn_few_shots_tasks()
+        # self.learn_few_shots_complexity()
         self.asked_clarify = False
     
     def load_pipelines(self) -> Dict[str, Type[pipeline]]:
@@ -358,16 +358,16 @@ class AgentRouter:
         labels = [label for _, label in few_shots]
         self.talk_classifier.add_examples(texts, labels)
 
-    def llm_router(self, text: str) -> tuple:
-        """
-        Inference of the LLM router model.
-        Args:
-            text: The input text
-        """
-        predictions = self.talk_classifier.predict(text)
-        predictions = [pred for pred in predictions if pred[0] not in ["HIGH", "LOW"]]
-        predictions = sorted(predictions, key=lambda x: x[1], reverse=True)
-        return predictions[0]
+    # def llm_router(self, text: str) -> tuple:
+    #     """
+    #     Inference of the LLM router model.
+    #     Args:
+    #         text: The input text
+    #     """
+    #     predictions = self.talk_classifier.predict(text)
+    #     predictions = [pred for pred in predictions if pred[0] not in ["HIGH", "LOW"]]
+    #     predictions = sorted(predictions, key=lambda x: x[1], reverse=True)
+    #     return predictions[0]
     
     def router_vote(self, text: str, labels: list, log_confidence:bool = False) -> str:
         """
