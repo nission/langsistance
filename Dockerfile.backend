@@ -42,7 +42,7 @@ RUN apt-get update -y && \
       gnupg2 \
       wget \
       unzip \
-#      libasound2 \   #声音系统库
+      libasound2 \   #声音系统库
       libatk-bridge2.0-0 \
       libgtk-4-1 \
       libnss3 \
