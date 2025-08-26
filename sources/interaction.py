@@ -146,7 +146,7 @@ class Interaction:
         self.is_active = True
         self.last_query = query
     
-    async def think(self) -> bool:
+    async def think(self, user_id) -> bool:
         """Request AI agents to process the user input."""
         push_last_agent_memory = False
         if self.last_query is None or len(self.last_query) == 0:
@@ -159,7 +159,7 @@ class Interaction:
         tmp = self.last_answer
         self.current_agent = agent
         self.is_generating = True
-        self.last_answer, self.last_reasoning = await agent.process(self.last_query, self.speech)
+        self.last_answer, self.last_reasoning = await agent.process(user_id, self.last_query, self.speech)
         self.is_generating = False
         if push_last_agent_memory:
             self.current_agent.memory.push('user', self.last_query)

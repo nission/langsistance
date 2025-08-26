@@ -83,8 +83,8 @@ class GeneralAgent(Agent):
         tools = await adapter.create_tools(client)
         return tools
 
-    async def process(self, prompt, speech_module) -> str:
-        if self.enabled == False:
+    async def process(self,user_id, prompt, speech_module) -> str:
+        if not self.enabled:
             return "MCP Agent is disabled."
         user_prompt = self.expand_prompt(prompt)
         system_prompt = self.generate_system_prompt()
