@@ -37,6 +37,7 @@ RUN apt-get update -y && \
       libportaudio2 \
       libportaudiocpp0 \
       portaudio19-dev \
+      python3-pyaudio \
       ffmpeg \
       libavcodec-dev \
       libavformat-dev \
