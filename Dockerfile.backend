@@ -34,6 +34,7 @@ RUN apt-get update -y && \
       g++ \
       gfortran \
       libportaudio2 \
+      libportaudiocpp0 \
       portaudio19-dev \
       ffmpeg \
       libavcodec-dev \
