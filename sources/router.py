@@ -4,7 +4,7 @@ import torch
 import random
 from typing import List, Tuple, Type, Dict
 
-from transformers import pipeline
+from transformers import pipelines
 from adaptive_classifier import AdaptiveClassifier
 
 from sources.agents.agent import Agent

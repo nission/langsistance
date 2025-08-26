@@ -34,7 +34,7 @@ fi
 
 # Sync the project (creates venv and installs dependencies)
 echo "Setting up Python environment with uv..."
-uv sync --python 3.10 || { echo "Failed to sync uv project"; exit 1; }
+uv sync --python 3.11 || { echo "Failed to sync uv project"; exit 1; }
 
 # Add specific packages
 echo "Adding Selenium..."
