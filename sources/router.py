@@ -33,16 +33,16 @@ class AgentRouter:
         # self.learn_few_shots_complexity()
         self.asked_clarify = False
     
-    def load_pipelines(self) -> Dict[str, Type[pipeline]]:
-        """
-        Load the pipelines for the text classification used for routing.
-        returns:
-            Dict[str, Type[pipeline]]: The loaded pipelines
-        """
-        animate_thinking("Loading zero-shot pipeline...", color="status")
-        return {
-            "bart": pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
-        }
+    # def load_pipelines(self) -> Dict[str, Type[pipeline]]:
+    #     """
+    #     Load the pipelines for the text classification used for routing.
+    #     returns:
+    #         Dict[str, Type[pipeline]]: The loaded pipelines
+    #     """
+    #     animate_thinking("Loading zero-shot pipeline...", color="status")
+    #     return {
+    #         "bart": pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+    #     }
 
     def load_llm_router(self) -> AdaptiveClassifier:
         """
