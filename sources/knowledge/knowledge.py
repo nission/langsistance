@@ -50,7 +50,7 @@ def get_embedding(text: str) -> List[float]:
     """使用 OpenAI 获取文本的嵌入向量"""
     try:
         response = client.embeddings.create(
-            model="text-embedding-ada-002",
+            model="text-embedding-3-small",
             input=text
         )
         return response.data[0].embedding

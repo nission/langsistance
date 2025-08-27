@@ -5,6 +5,7 @@ from sources.utility import pretty_print, animate_thinking
 from sources.agents.agent import Agent
 from sources.tools.mcpFinder import MCP_finder
 from sources.memory import Memory
+from sources.logger import Logger
 
 from mcp_use.client import MCPClient
 from mcp_use.adapters import LangChainAdapter
@@ -33,7 +34,8 @@ class GeneralAgent(Agent):
                                 model_provider=provider.get_model_name())
         self.enabled = True
         self.knowledgeTool = {}
-    
+        self.logger = Logger("general_agent.log")
+
     def get_api_keys(self) -> dict:
         """
         Returns the API keys for the tools.
@@ -68,10 +70,14 @@ class GeneralAgent(Agent):
         """
         生成系统提示
         """
+        tool = {"server_config":{}}
+        params = {"tool":tool}
+        self.knowledgeTool = {"params":params}
+        self.logger.info(self.knowledgeTool)
         system_prompt = f"""
         你是一个MCP智能助手，你的任务是根据用户的问题和上下文，使用MCP服务器提供的工具来解决问题。
         你可以使用的MCP服务器是：
-        {self.knowledgeTool["params"]["tool"]["server_config"]}
+        {", " . join(self.knowledgeTool["params"]["tool"]["server_config"])}
         工具调用完成后基于结果给出最终答案。
         如果不需要使用工具，请直接回答用户的问题。
         """
@@ -79,7 +85,7 @@ class GeneralAgent(Agent):
 
     async def get_tools(self) -> dict:
 
-        client = MCPClient.from_config_file("browser_mcp.json")
+        client = MCPClient.from_config_file("tool_config.json")
         adapter = LangChainAdapter()
 
         tools = await adapter.create_tools(client)
