@@ -75,7 +75,7 @@ apt-get install -y \
   alsa-utils \
 && rm -rf /var/lib/apt/lists/*
 
-ENV CHROME_TESTING_VERSION=134.0.6998.88
+ENV CHROME_TESTING_VERSION=139.0.7258.138
 ENV DISPLAY=:99
 
 WORKDIR /app
@@ -117,6 +117,9 @@ COPY prompts/ ./prompts/
 COPY crx/ crx/
 COPY llm_router/ llm_router/
 COPY config.ini .
+
+# Download the LLM router model
+RUN cd llm_router && bash dl_safetensors.sh
 
 EXPOSE 8000
 

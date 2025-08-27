@@ -165,7 +165,7 @@ def initialize_system():
         logger.info("To see the browser, run 'python cli.py' on your host machine instead")
         
         headless = True
-    
+    logger.info(f"Provider initing: {config['MAIN']['provider_name']}")
     provider = Provider(
         provider_name=config["MAIN"]["provider_name"],
         model=config["MAIN"]["provider_model"],

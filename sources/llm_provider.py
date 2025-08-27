@@ -25,7 +25,7 @@ class Provider:
         self.server_ip = server_address
         self.server_address = server_address
         self.available_providers = {
-            # "ollama": self.ollama_fn,
+            "ollama": self.ollama_fn,
             "server": self.server_fn,
             "openai": self.openai_fn,
             "lm-studio": self.lm_studio_fn,
@@ -41,8 +41,8 @@ class Provider:
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
         self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter"]
-        #if self.provider_name not in self.available_providers:
-           #raise ValueError(f"Unknown provider: {provider_name}")
+        if self.provider_name not in self.available_providers:
+           raise ValueError(f"Unknown provider: {provider_name}")
         if self.provider_name in self.unsafe_providers and self.is_local == False:
             pretty_print("Warning: you are using an API provider. You data will be sent to the cloud.", color="warning")
             self.api_key = self.get_api_key(self.provider_name)

@@ -4,8 +4,8 @@ services:
   redis:
     container_name: redis
     profiles: ["core", "full"]
-    image: docker.io/valkey/valkey:8-alpine
-    command: valkey-server --save 30 1 --loglevel warning
+    image: redis:alpine
+    command: redis-server --save 30 1 --loglevel warning
     restart: unless-stopped
     volumes:
       - redis-data:/data
@@ -85,7 +85,7 @@ services:
     environment:
       - NODE_ENV=development
       - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_BACKEND_URL=http://localhost:7777
+      - REACT_APP_BACKEND_URL=http://macmini.self:7777
     networks:
       - agentic-seek-net
 
