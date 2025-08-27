@@ -1,7 +1,7 @@
 import os
 import json
 import uuid
-import openai
+from openai import OpenAI
 import numpy as np
 from typing import Dict, List, Optional
 from pydantic import BaseModel
@@ -13,9 +13,10 @@ import pymysql
 from sources.utility import pretty_print
 
 # 设置 OpenAI API 密钥
-openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
-    raise ValueError("请设置 OPENAI_API_KEY 环境变量")
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai-proxy.com")  # 设置基础 URL
+)
 
 # 存储用户知识库 {user_id: [{"id": str, "question": str, "answer": str, "embedding": list, "params": dict}]}
 user_knowledge_bases: Dict[str, List[Dict]] = {}
@@ -48,7 +49,7 @@ class KnowledgeBaseResponse(BaseModel):
 def get_embedding(text: str) -> List[float]:
     """使用 OpenAI 获取文本的嵌入向量"""
     try:
-        response = openai.embeddings.create(
+        response = client.embeddings.create(
             model="text-embedding-ada-002",
             input=text
         )
@@ -126,7 +127,7 @@ def generate_answer_with_context(question: str, context: List[Dict]) -> str:
     """
 
     try:
-        response = openai.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "你是一个有帮助的助手，基于提供的上下文信息回答问题。"},
@@ -204,7 +205,7 @@ async def query_knowledge_base(query: UserQuestion):
         else:
             # 如果没有找到相关内容，直接使用 OpenAI 生成答案
             try:
-                response = openai.chat.completions.create(
+                response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "你是一个有帮助的助手。"},
