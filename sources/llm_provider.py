@@ -41,6 +41,11 @@ class Provider:
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
         self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter"]
+<<<<<<< HEAD
+=======
+        if self.provider_name not in self.available_providers:
+            raise ValueError(f"Unknown provider: {provider_name}")
+>>>>>>> 715e786 (gc开发环境)
         self.logger.info(f"provider_name:{self.provider_name}")
         if self.provider_name not in self.available_providers:
             raise ValueError(f"Unknown provider: {provider_name}")
