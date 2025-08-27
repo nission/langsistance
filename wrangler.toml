@@ -1,0 +1,8 @@
+name = "langsistance"
+compatibility_date = "2025-08-01"
+
+[container]
+
+[container.build]
+dockerfile = "Dockerfile.backend"
+
