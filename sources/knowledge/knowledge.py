@@ -15,7 +15,7 @@ from sources.utility import pretty_print
 # 设置 OpenAI API 密钥
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
-    base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com")  # 设置基础 URL
+    # base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com")  # 设置基础 URL
 )
 
 # 存储用户知识库 {user_id: [{"id": str, "question": str, "answer": str, "embedding": list, "params": dict}]}
