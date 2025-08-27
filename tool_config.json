@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "redis": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "mcp/redis",
+        "redis://localhost:6379/0"]
+    }
+  }
+}
