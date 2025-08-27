@@ -34,9 +34,12 @@ RUN apt-get update -y && \
       g++ \
       make \
       gfortran \
+      python-all-dev \
+      python3-all-dev \
       libportaudio2 \
       libportaudiocpp0 \
       portaudio19-dev \
+      python-pyaudio \
       python3-pyaudio \
       ffmpeg \
       libavcodec-dev \
