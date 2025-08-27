@@ -29,18 +29,13 @@ RUN apt-get update -y && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update -y && \
-      apt-get install -y --no-install-recommends \
+      apt-get install -y \
       gcc \
       g++ \
       make \
       gfortran \
-      python-all-dev \
-      python3-all-dev \
       libportaudio2 \
-      libportaudiocpp0 \
       portaudio19-dev \
-      python-pyaudio \
-      python3-pyaudio \
       ffmpeg \
       libavcodec-dev \
       libavformat-dev \
@@ -50,9 +45,9 @@ RUN apt-get update -y && \
       unzip \
       libasound2-dev \
       libjack-dev \
-      libasound2 \   #声音系统库
+ #     libasound2 \   #声音系统库
       libatk-bridge2.0-0 \
-      libgtk-4-1 \
+#      libgtk-4-1 \
       libnss3 \
       xdg-utils \
       wget \

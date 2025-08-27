@@ -4,7 +4,7 @@ from typing import List, Tuple, Type, Dict
 from sources.text_to_speech import Speech
 from sources.utility import pretty_print, animate_thinking
 from sources.router import AgentRouter
-from sources.speech_to_text import AudioTranscriber, AudioRecorder
+# from sources.speech_to_text import AudioTranscriber, AudioRecorder
 import threading
 
 
@@ -57,8 +57,8 @@ class Interaction:
         """Initialize STT."""
         if not self.transcriber or not self.recorder:
             animate_thinking("Initializing speech recognition...", color="status")
-            self.transcriber = AudioTranscriber(self.ai_name, verbose=False)
-            self.recorder = AudioRecorder()
+            # self.transcriber = AudioTranscriber(self.ai_name, verbose=False)
+            # self.recorder = AudioRecorder()
     
     def emit_status(self):
         """Print the current status of agenticSeek."""
@@ -117,16 +117,17 @@ class Interaction:
     
     def transcription_job(self) -> str:
         """Transcribe the audio from the microphone."""
-        self.recorder = AudioRecorder(verbose=True)
-        self.transcriber = AudioTranscriber(self.ai_name, verbose=True)
-        self.transcriber.start()
-        self.recorder.start()
-        self.recorder.join()
-        self.transcriber.join()
-        query = self.transcriber.get_transcript()
-        if query == "exit" or query == "goodbye":
-            return None
-        return query
+        # self.recorder = AudioRecorder(verbose=True)
+        # self.transcriber = AudioTranscriber(self.ai_name, verbose=True)
+        # self.transcriber.start()
+        # self.recorder.start()
+        # self.recorder.join()
+        # self.transcriber.join()
+        # query = self.transcriber.get_transcript()
+        # if query == "exit" or query == "goodbye":
+        #     return None
+        # return query
+        return "None"
 
     def get_user(self) -> str:
         """Get the user input from the microphone or the keyboard."""
