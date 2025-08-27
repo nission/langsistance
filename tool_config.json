@@ -1,13 +1,13 @@
 {
   "mcpServers": {
-    "redis": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "mcp/redis",
-        "redis://localhost:6379/0"]
-    }
+        "mcp-ical": {
+            "command": "uv",
+            "args": [
+                "--directory",
+                "/ABSOLUTE/PATH/TO/PARENT/FOLDER/mcp-ical",
+                "run",
+                "mcp-ical"
+            ]
+        }
   }
 }

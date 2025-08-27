@@ -1,10 +1,10 @@
 import os
 import sys
-import torch
+# import torch
 import random
 from typing import List, Tuple, Type, Dict
 
-from transformers import pipeline
+# from transformers import pipeline
 from adaptive_classifier import AdaptiveClassifier
 
 from sources.agents.agent import Agent
@@ -60,13 +60,13 @@ class AgentRouter:
             raise Exception("Failed to load the routing model. Please run the dl_safetensors.sh script inside llm_router/ directory to download the model.")
         return talk_classifier
 
-    def get_device(self) -> str:
-        if torch.backends.mps.is_available():
-            return "mps"
-        elif torch.cuda.is_available():
-            return "cuda:0"
-        else:
-            return "cpu"
+    # def get_device(self) -> str:
+    #     if torch.backends.mps.is_available():
+    #         return "mps"
+    #     elif torch.cuda.is_available():
+    #         return "cuda:0"
+    #     else:
+    #         return "cpu"
     
     def learn_few_shots_complexity(self) -> None:
         """

@@ -5,7 +5,7 @@ import os
 import sys
 import json
 from typing import List, Tuple, Type, Dict
-import torch
+# import torch
 import configparser
 
 from sources.utility import timer_decorator, pretty_print, animate_thinking
@@ -36,7 +36,7 @@ class Memory():
         # memory compression system
         self.model = None
         self.tokenizer = None
-        self.device = self.get_cuda_device()
+        # self.device = self.get_cuda_device()
         self.memory_compression = memory_compression
         self.model_provider = model_provider
         if self.memory_compression:
@@ -191,13 +191,13 @@ class Memory():
     def get(self) -> list:
         return self.memory
 
-    def get_cuda_device(self) -> str:
-        if torch.backends.mps.is_available():
-            return "mps"
-        elif torch.cuda.is_available():
-            return "cuda"
-        else:
-            return "cpu"
+    # def get_cuda_device(self) -> str:
+    #     if torch.backends.mps.is_available():
+    #         return "mps"
+    #     elif torch.cuda.is_available():
+    #         return "cuda"
+    #     else:
+    #         return "cpu"
 
     def summarize(self, text: str, min_length: int = 64) -> str:
         """

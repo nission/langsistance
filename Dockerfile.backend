@@ -53,6 +53,21 @@ RUN apt-get update -y && \
       wget \
     && rm -rf /var/lib/apt/lists/*
 
+# 1. 安装必要工具和依赖
+RUN apt-get update && apt-get install -y curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. 添加 NodeSource 官方仓库（以 Node.js 20.x 为例）
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+
+# 3. 安装 Node.js 和 npm（包含构建工具）
+RUN apt-get update && apt-get install -y \
+    nodejs \
+    && npm install -g npm@latest \
+    && rm -rf /var/lib/apt/lists/*
+
+# 4. 验证安装
+RUN node --version && npm --version
 
 RUN apt-get update -y && \
 apt-get install -y \

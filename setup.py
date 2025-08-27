@@ -30,7 +30,7 @@ setup(
         "playsound>=1.3.0",
         "soundfile>=0.13.1",
         "transformers>=4.46.3",
-        "torch>=2.4.1",
+        # "torch>=2.4.1",
         "ollama>=0.4.7",
         "scipy>=1.9.3",
         "kokoro>=0.7.12",
