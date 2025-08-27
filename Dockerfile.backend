@@ -26,6 +26,7 @@ RUN apt-get update -y && apt-get install -y \
     libxrandr2 \
     xdg-utils \
     dbus \
+    libuv1-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update -y && \

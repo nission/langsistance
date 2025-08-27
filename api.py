@@ -227,10 +227,11 @@ def initialize_system():
 def get_db_connection():
     """创建并返回数据库连接"""
     db_config = {
-        'host': os.getenv('DB_HOST', 'localhost'),
-        'user': os.getenv('DB_USER', 'root'),
-        'password': os.getenv('DB_PASSWORD', ''),
-        'database': os.getenv('DB_NAME', 'langsistance'),
+        'host': os.getenv('MYSQL_HOST', 'localhost'),
+        'port' : int(os.getenv('MYSQL_PORT', 3306)),
+        'user': os.getenv('MYSQL_USER', 'root'),
+        'password': os.getenv('MYSQL_PASSWORD', ''),
+        'database': os.getenv('MYSQL_DATABASE', 'langsistance_db'),
         'charset': 'utf8mb4'
     }
     return pymysql.connect(**db_config)

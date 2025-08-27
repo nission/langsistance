@@ -1,8 +1,8 @@
 -- 创建额外的数据库
-CREATE DATABASE IF NOT EXISTS langsistance;
+CREATE DATABASE IF NOT EXISTS langsistance_db;
 
 -- 创建知识表
-USE langsistance;
+USE langsistance_db;
 CREATE TABLE  knowledge (
     id INT AUTO_INCREMENT PRIMARY KEY,
     userId VARCHAR(50) NOT NULL,
