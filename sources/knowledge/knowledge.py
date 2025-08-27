@@ -278,10 +278,11 @@ async def delete_knowledge_item(user_id: str, item_id: str):
 def get_db_connection():
     """创建并返回数据库连接"""
     db_config = {
-        'host': os.getenv('DB_HOST', 'localhost'),
-        'user': os.getenv('DB_USER', 'root'),
-        'password': os.getenv('DB_PASSWORD', ''),
-        'database': os.getenv('DB_NAME', 'langsistance'),
+        'host': os.getenv('MYSQL_HOST', '127.0.0.1'),
+        'port' : int(os.getenv('MYSQL_PORT', 3306)),
+        'user': os.getenv('MYSQL_USER', 'root'),
+        'password': os.getenv('MYSQL_PASSWORD', ''),
+        'database': os.getenv('MYSQL_DATABASE', 'langsistance_db'),
         'charset': 'utf8mb4'
     }
     return pymysql.connect(**db_config)
@@ -308,10 +309,10 @@ def get_user_knowledge(user_id: str) -> List[Dict]:
                 # 包括用户自己的知识和公开的知识
                 query_sql = """
                             SELECT id, \
-                                   userId, \
+                                   user_id, \
                                    question, \
                                    description, \
-                                   answer, public, model_name, tool_id, params, created_at, updated_at
+                                   answer, public, model_name, tool_id, params, create_time, update_time
                             FROM knowledge
                             WHERE status = %s
                                OR userId = %s)
