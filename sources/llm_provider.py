@@ -213,31 +213,36 @@ class Provider:
         """
         Use openai to generate text.
         """
+        self.logger.info(f"api key:{self.api_key}")
         client = OpenAI(api_key=self.api_key)
-        llm = ChatOpenAI(
-            self.model,
-            openai_api_key=self.api_key,
-            temperature=0
-        )
+        # llm = ChatOpenAI(
+        #     self.model,
+        #     openai_api_key=self.api_key,
+        #     temperature=0
+        # )
 
-        messages = [
-            SystemMessage(content=history["system"]),
-            HumanMessage(content=history["user"])
-        ]
+        # messages = [
+        #     SystemMessage(content=history["system"]),
+        #     HumanMessage(content=history["user"])
+        # ]
 
         try:
-            agent = initialize_agent(
-                tools=tools,
-                llm=llm,
-                agent=AgentType.OPENAI_FUNCTIONS,  # 使用 OpenAI 函数调用
-                verbose=verbose  # 显示详细执行过程
-            )
-
-            response = agent.run(messages)
-            # response = client.chat.completions.create(
-            #     model=self.model,
-            #     messages=history,
+            # agent = initialize_agent(
+            #     tools=tools,
+            #     llm=llm,
+            #     agent=AgentType.OPENAI_FUNCTIONS,  # 使用 OpenAI 函数调用
+            #     verbose=verbose  # 显示详细执行过程
             # )
+            #
+            # response = agent.run(messages)
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": history["system"]},
+                    {"role": "user", "content": history["user"]}
+                ],
+                temperature=0
+            )
             if response is None:
                 raise Exception("OpenAI response is empty.")
             thought = response.choices[0].message.content

@@ -1,13 +1,18 @@
 {
   "mcpServers": {
-        "mcp-ical": {
-            "command": "uv",
-            "args": [
-                "--directory",
-                "/ABSOLUTE/PATH/TO/PARENT/FOLDER/mcp-ical",
-                "run",
-                "mcp-ical"
-            ]
-        }
+    "mysql": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@fhuang/mcp-mysql-server"
+      ],
+      "env": {
+        "MYSQL_HOST": "langsistance_db",
+        "MYSQL_USER": "langsistance_user",
+        "MYSQL_PORT": "3306",
+        "MYSQL_PASSWORD": "12345678",
+        "MYSQL_DATABASE": "langsistance_db"
+      }
+    }
   }
 }
