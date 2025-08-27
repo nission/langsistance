@@ -278,9 +278,9 @@ async def delete_knowledge_item(user_id: str, item_id: str):
 def get_db_connection():
     """创建并返回数据库连接"""
     db_config = {
-        'host': os.getenv('MYSQL_HOST', '127.0.0.1'),
+        'host': os.getenv('MYSQL_HOST', 'langsistance_db'),
         'port' : int(os.getenv('MYSQL_PORT', 3306)),
-        'user': os.getenv('MYSQL_USER', 'root'),
+        'user': os.getenv('MYSQL_USER', 'langsistance_user'),
         'password': os.getenv('MYSQL_PASSWORD', ''),
         'database': os.getenv('MYSQL_DATABASE', 'langsistance_db'),
         'charset': 'utf8mb4'
