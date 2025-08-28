@@ -9,6 +9,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 from sources.memory import Memory
+from sources.logger import Logger
 from sources.utility import pretty_print
 from sources.schemas import executorResult
 
@@ -40,7 +41,6 @@ class Agent():
         self.current_directory = os.getcwd()
         self.llm = provider 
         self.memory = None
-        self.tools = None
         self.tools = {}
         self.blocks_result = []
         self.success = True
@@ -50,6 +50,7 @@ class Agent():
         self.stop = False
         self.verbose = verbose
         self.executor = ThreadPoolExecutor(max_workers=1)
+        self.agentLogger = Logger("agent.log")
     
     @property
     def get_agent_name(self) -> str:
@@ -163,15 +164,19 @@ class Agent():
         Asynchronously ask the LLM to process the prompt.
         """
         self.status_message = "Thinking..."
+        self.agentLogger.info("LLM request")
         loop = asyncio.get_event_loop()
+        self.agentLogger.info("LLM request loop")
         return await loop.run_in_executor(self.executor, self.sync_llm_request)
     
     def sync_llm_request(self) -> Tuple[str, str]:
         """
         Ask the LLM to process the prompt and return the answer and the reasoning.
         """
+        self.agentLogger.info(f"self.memory:{self.memory}")
         memory = self.memory.get()
-        thought = self.llm.respond(memory, self.verbose)
+        self.agentLogger.info(f"memory:{memory}")
+        thought = self.llm.respond(self.tools, memory, self.verbose)
 
         reasoning = self.extract_reasoning_text(thought)
         answer = self.remove_reasoning_text(thought)

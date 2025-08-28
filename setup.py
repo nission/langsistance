@@ -57,6 +57,7 @@ setup(
         "sniffio",
         "tqdm>4",
         "mcp-use>=1.3.0",
+        "fastmcp>=2.11.2",
         "langchain>=0.3.27",
         "langchain-openai>=0.3.31",
         "redis>=6.4.0",

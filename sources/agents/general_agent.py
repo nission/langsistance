@@ -81,27 +81,37 @@ class GeneralAgent(Agent):
         工具调用完成后基于结果给出最终答案。
         如果不需要使用工具，请直接回答用户的问题。
         """
-        return self.expand_prompt(system_prompt)
+        # return self.expand_prompt(system_prompt)
+        return system_prompt
 
     async def get_tools(self) -> dict:
 
-        client = MCPClient.from_config_file("tool_config.json")
-        adapter = LangChainAdapter()
+        try:
+            client = MCPClient.from_config_file("tool_config.json")
+            adapter = LangChainAdapter()
+            self.logger.info(f"get_tools")
 
-        tools = await adapter.create_tools(client)
-        return tools
+            tools = await adapter.create_tools(client)
+            self.logger.info(f"tools{tools}")
+            return tools
+        except Exception as e:
+            raise Exception(f"get_tool failed: {str(e)}") from e
 
     async def process(self,user_id, prompt, speech_module) -> str:
         if not self.enabled:
             return "MCP Agent is disabled."
         self.knowledgeTool = get_user_knowledge(user_id)
-        user_prompt = self.expand_prompt(prompt)
+        # user_prompt = self.expand_prompt(prompt)
+        user_prompt = prompt
         system_prompt = self.generate_system_prompt()
         self.memory.push('user', user_prompt)
         self.memory.push('system', system_prompt)
+        self.logger.info(f"memory:{self.memory}")
+        self.logger.info(f"memory.get():{self.memory.get()}")
         self.tools = await self.get_tools()
         working = True
         while working == True:
+            self.logger.info(f"tools:{self.tools}")
             animate_thinking("Thinking...", color="status")
             answer, reasoning = await self.llm_request()
             exec_success, _ = self.execute_modules(answer)

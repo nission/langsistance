@@ -105,7 +105,7 @@ RUN chmod +x /opt/chrome/chrome
 RUN pip3 install --upgrade pip setuptools wheel
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --default-timeout=1000 --retries 5 -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=1000 --retries 5 -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 RUN mkdir -p /opt/workspace
 RUN mkdir -p /tmp && chmod 1777 /tmp
