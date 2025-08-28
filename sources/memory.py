@@ -23,7 +23,7 @@ class Memory():
                  recover_last_session: bool = False,
                  memory_compression: bool = True,
                  model_provider: str = "deepseek-r1:14b"):
-        self.memory = [{'role': 'system', 'content': system_prompt}]
+        self.memory = []
         
         self.logger = Logger("memory.log")
         self.session_time = datetime.datetime.now()
@@ -162,14 +162,17 @@ class Memory():
                 self.logger.info(f"Compressing memory: Content {len(content)} > {ideal_ctx} model context.")
                 self.compress()
         curr_idx = len(self.memory)
-        if self.memory[curr_idx-1]['content'] == content:
+        self.logger.info(f"memory in memory:{self.memory}")
+        self.logger.info(f"content in memory:{content}")
+        self.logger.info(f"role in memory:{role}")
+        if curr_idx > 0 and self.memory[curr_idx - 1]['content'] == content:
             pretty_print("Warning: same message have been pushed twice to memory", color="error")
-        time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if config["MAIN"]["provider_name"] == "openrouter":
-            self.memory.append({'role': role, 'content': content})
-        else:
-            self.memory.append({'role': role, 'content': content, 'time': time_str, 'model_used': self.model_provider})
-        return curr_idx-1
+        # time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # if config["MAIN"]["provider_name"] == "openrouter":
+        self.memory.append({'role': role, 'content': content})
+        # else:
+        #     self.memory.append({'role': role, 'content': content, 'time': time_str, 'model_used': self.model_provider})
+        return curr_idx - 1
     
     def clear(self) -> None:
         """Clear all memory except system prompt"""

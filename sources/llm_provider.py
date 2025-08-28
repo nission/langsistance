@@ -41,8 +41,9 @@ class Provider:
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
         self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter"]
+        self.logger.info(f"provider_name:{self.provider_name}")
         if self.provider_name not in self.available_providers:
-           raise ValueError(f"Unknown provider: {provider_name}")
+            raise ValueError(f"Unknown provider: {provider_name}")
         if self.provider_name in self.unsafe_providers and self.is_local == False:
             pretty_print("Warning: you are using an API provider. You data will be sent to the cloud.", color="warning")
             self.api_key = self.get_api_key(self.provider_name)
@@ -55,6 +56,7 @@ class Provider:
     def get_api_key(self, provider):
         load_dotenv()
         api_key_var = f"{provider.upper()}_API_KEY"
+        self.logger.info(f"api_key_var:{api_key_var}")
         api_key = os.getenv(api_key_var)
         if not api_key:
             pretty_print(f"API key {api_key_var} not found in .env file. Please add it", color="warning")
@@ -68,14 +70,15 @@ class Provider:
             return "http://localhost", False
         return url, True
 
-    def respond(self, history, verbose=True):
+    def respond(self, tools, history, verbose=True):
         """
         Use the choosen provider to generate text.
         """
         llm = self.available_providers[self.provider_name]
         self.logger.info(f"Using provider: {self.provider_name} at {self.server_ip}")
+        self.logger.info(f"history:{history}")
         try:
-            thought = llm(history, verbose)
+            thought = llm(tools, history, verbose)
         except KeyboardInterrupt:
             self.logger.warning("User interrupted the operation with Ctrl+C")
             return "Operation interrupted by user. REQUEST_EXIT"
@@ -214,6 +217,7 @@ class Provider:
         Use openai to generate text.
         """
         self.logger.info(f"api key:{self.api_key}")
+        self.logger.info(f"history:{history}")
         client = OpenAI(api_key=self.api_key)
         # llm = ChatOpenAI(
         #     self.model,
@@ -237,10 +241,8 @@ class Provider:
             # response = agent.run(messages)
             response = client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": history["system"]},
-                    {"role": "user", "content": history["user"]}
-                ],
+                messages=history,
+                tools=tools,
                 temperature=0
             )
             if response is None:
