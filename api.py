@@ -120,8 +120,8 @@ class KnowledgeItem(BaseModel):
     model_name: str
     tool_id: int
     params: str
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    create_time: Optional[str] = None
+    update_time: Optional[str] = None
 
 class KnowledgeQueryResponse(BaseModel):
     success: bool
@@ -432,7 +432,7 @@ async def create_knowledge_record(request: KnowledgeCreateRequest):
             # 插入数据
             sql = """
                   INSERT INTO knowledge
-                  (userId, question, description, answer, public, embeddingId, model_name, tool_id, params, status)
+                  (user_id, question, description, answer, public, embeddingId, model_name, tool_id, params, status)
                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %d) \
                   """
             cursor.execute(sql, (
@@ -490,7 +490,7 @@ async def create_knowledge_record(request: KnowledgeCreateRequest):
         if connection:
             connection.close()
 
-@api.delete("/knowledge", response_model=KnowledgeDeleteResponse)
+@api.post("/knowledge", response_model=KnowledgeDeleteResponse)
 async def delete_knowledge_record(request: KnowledgeDeleteRequest):
     """
     删除知识记录接口
@@ -523,7 +523,7 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # 首先检查记录是否存在以及用户ID是否匹配
-            check_sql = "SELECT userId FROM knowledge WHERE id = %s"
+            check_sql = "SELECT user_id FROM knowledge WHERE id = %s"
             cursor.execute(check_sql, (request.knowledgeId,))
             result = cursor.fetchone()
 
@@ -592,7 +592,7 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest):
             connection.close()
 
 
-@api.put("/knowledge", response_model=KnowledgeUpdateResponse)
+@api.post("/knowledge", response_model=KnowledgeUpdateResponse)
 async def update_knowledge_record(request: KnowledgeUpdateRequest):
     """
     修改知识记录接口
@@ -845,18 +845,18 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
             # 查询数据
             query_sql = """
                         SELECT id, \
-                               userId, \
+                               user_id, \
                                question, \
                                description, \
-                               answer, public, model_name, tool_id, params, created_at, updated_at
+                               answer, public, model_name, tool_id, params, create_time, update_time
                         FROM knowledge
                         WHERE status = %s
                           AND (public = %s \
-                           OR userId = %s)
+                           OR user_id = %s)
                           AND (question LIKE %s \
                            OR description LIKE %s \
                            OR answer LIKE %s)
-                        ORDER BY updated_at DESC
+                        ORDER BY update_time DESC
                             LIMIT %s \
                         OFFSET %s \
                         """
@@ -870,7 +870,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
             for row in results:
                 knowledge_item = KnowledgeItem(
                     id=row['id'],
-                    userId=row['userId'],
+                    userId=row['user_id'],
                     question=row['question'],
                     description=row['description'],
                     answer=row['answer'],
@@ -880,14 +880,14 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
                     params=row['params'] or ""
                 )
                 # 处理时间字段
-                if row['created_at']:
-                    knowledge_item.created_at = row['created_at'].isoformat() if hasattr(row['created_at'],
+                if row['create_time']:
+                    knowledge_item.create_time = row['create_time'].isoformat() if hasattr(row['create_time'],
                                                                                          'isoformat') else str(
-                        row['created_at'])
-                if row['updated_at']:
-                    knowledge_item.updated_at = row['updated_at'].isoformat() if hasattr(row['updated_at'],
+                        row['create_time'])
+                if row['update_time']:
+                    knowledge_item.update_time = row['update_time'].isoformat() if hasattr(row['update_time'],
                                                                                          'isoformat') else str(
-                        row['updated_at'])
+                        row['update_time'])
 
                 knowledge_items.append(knowledge_item)
 

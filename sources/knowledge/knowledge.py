@@ -316,7 +316,7 @@ def get_user_knowledge(user_id: str) -> List[Dict]:
                             FROM knowledge
                             WHERE status = %s
                                OR userId = %s)
-                            ORDER BY updated_at DESC \
+                            ORDER BY update_time DESC \
                             """
 
                 cursor.execute(query_sql, (1, user_id))
