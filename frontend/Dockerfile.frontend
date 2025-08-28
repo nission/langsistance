@@ -1,10 +1,12 @@
-FROM node:18
+FROM node:18-alpine
 
 WORKDIR /app
 
 # Install dependencies
 COPY agentic-seek-front/package.json agentic-seek-front/package-lock.json ./
-RUN npm install
+# RUN npm audit
+# RUN npm audit fix
+RUN npm install --legacy-peer-deps
 
 # Copy application code
 COPY agentic-seek-front/ .

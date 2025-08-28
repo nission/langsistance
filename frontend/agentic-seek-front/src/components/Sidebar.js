@@ -1,33 +1,150 @@
 import React from 'react';
-import './Sidebar.css';
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Toolbar,
+  useMediaQuery,
+  useTheme
+} from '@mui/material';
+import { Chat as ChatIcon, Book as KnowledgeIcon, Settings as SettingsIcon } from '@mui/icons-material';
+import { useTheme as useAppTheme } from '../contexts/ThemeContext';
+import { usePerformance } from '../contexts/PerformanceContext';
 
 const Sidebar = ({ activeTab, onTabChange }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const { isDark } = useAppTheme();
+  const { shouldUseAnimation } = usePerformance();
+
+  const drawerWidth = isMobile ? 72 : isTablet ? 180 : 220;
+
+  const menuItems = [
+    {
+      id: 'chat',
+      label: '聊天',
+      icon: <ChatIcon />,
+    },
+    {
+      id: 'knowledge',
+      label: '知识库',
+      icon: <KnowledgeIcon />,
+    },
+    {
+      id: 'settings',
+      label: '设置',
+      icon: <SettingsIcon />,
+    },
+  ];
+
   return (
-    <div className="sidebar">
-      <nav className="sidebar-nav">
-        <button 
-          className={`nav-item ${activeTab === 'chat' ? 'active' : ''}`}
-          onClick={() => onTabChange('chat')}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 13.8214 2.48697 15.5291 3.33782 17L2.5 21.5L7 20.6622C8.47087 21.513 10.1786 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>聊天</span>
-        </button>
-        <button 
-          className={`nav-item ${activeTab === 'knowledge' ? 'active' : ''}`}
-          onClick={() => onTabChange('knowledge')}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 19.5V4.5C4 3.67157 4.67157 3 5.5 3H18.5C19.3284 3 20 3.67157 20 4.5V19.5C20 20.3284 19.3284 21 18.5 21H5.5C4.67157 21 4 20.3284 4 19.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M8 7H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M8 12H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M8 17H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <span>知识库</span>
-        </button>
-      </nav>
-    </div>
+    <Drawer
+      variant="permanent"
+      sx={{
+        width: drawerWidth,
+        flexShrink: 0,
+        [`& .MuiDrawer-paper`]: {
+          width: drawerWidth,
+          boxSizing: 'border-box',
+          borderRight: `1px solid ${isDark ? theme.palette.divider : 'rgba(0, 0, 0, 0.08)'}`,
+          backgroundColor: isDark ? theme.palette.background.paper : theme.palette.background.default,
+          boxShadow: isDark ? '2px 0 20px rgba(0, 0, 0, 0.3)' : '2px 0 20px rgba(0, 0, 0, 0.08)',
+          borderRadius: isMobile ? '0 12px 0 0' : '0 24px 0 0',
+          overflow: 'hidden',
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 24,
+            background: `linear-gradient(180deg, ${isDark ? theme.palette.background.paper : theme.palette.background.default} 60%, transparent)`,
+            borderRadius: isMobile ? '0 12px 0 0' : '0 24px 0 0',
+            zIndex: 1,
+          },
+        },
+      }}
+    >
+      <Toolbar /> {/* 空的Toolbar用于占据AppBar的空间 */}
+      <List sx={{ 
+        padding: isMobile ? '0.75rem 0' : isTablet ? '1rem 0' : '1.5rem 0',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: isMobile ? '0.5rem' : isTablet ? '0.75rem' : '0.75rem',
+      }}>
+        {menuItems.map((item) => (
+          <ListItem
+            key={item.id}
+            button
+            onClick={() => onTabChange(item.id)}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isMobile ? 'center' : 'flex-start',
+              padding: isMobile ? '1.25rem' : isTablet ? '1rem 1.1rem' : '1rem 1.25rem',
+              borderRadius: isMobile ? '12px' : isTablet ? '14px' : '16px',
+              backgroundColor: activeTab === item.id ?
+                (isDark ? theme.palette.primary.dark : theme.palette.primary.light) :
+                'transparent',
+              color: activeTab === item.id ? 
+                (isDark ? theme.palette.primary.contrastText : theme.palette.primary.main) : 
+                (isDark ? theme.palette.text.primary : theme.palette.text.secondary),
+              boxShadow: activeTab === item.id ? 
+                (isDark ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.12)') : 
+                'none',
+              transition: 'all 0.3s ease',
+              /* 在移动端禁用复杂动画 */
+              '@media (max-width: 1023px)': {
+                transition: 'none',
+              },
+              position: 'relative',
+              overflow: 'hidden',
+              '&:hover': {
+                backgroundColor: activeTab === item.id ? 
+                  (isDark ? theme.palette.primary.main : theme.palette.primary.light) : 
+                  (isDark ? theme.palette.action.hover : theme.palette.action.selected),
+                color: activeTab === item.id ? 
+                  (isDark ? theme.palette.primary.contrastText : theme.palette.primary.main) : 
+                  theme.palette.text.primary,
+                transform: isMobile ? 'none' : 'translateY(-2px)',
+                /* 在移动端禁用复杂动画 */
+                '@media (max-width: 1023px)': {
+                  transform: 'none',
+                },
+                boxShadow: activeTab === item.id ? 
+                  (isDark ? '0 6px 16px rgba(0, 0, 0, 0.3)' : '0 6px 16px rgba(0, 0, 0, 0.15)') : 
+                  (isDark ? '0 6px 16px rgba(0, 0, 0, 0.1)' : '0 6px 16px rgba(0, 0, 0, 0.1)'),
+              },
+              '& .MuiListItemIcon-root': {
+                minWidth: isMobile ? 'auto' : isTablet ? '36px' : '44px',
+                color: 'inherit',
+                fontSize: isMobile ? '1.5rem' : isTablet ? '1.35rem' : '1.5rem',
+              },
+            }}
+          >
+            <ListItemIcon>
+              {item.icon}
+            </ListItemIcon>
+            {!isMobile && (
+              <ListItemText 
+                primary={item.label}
+                sx={{
+                  '& .MuiListItemText-primary': {
+                    fontSize: isTablet ? '0.9rem' : '1rem',
+                    fontWeight: 500,
+                  },
+                }}
+              />
+            )}
+          </ListItem>
+        ))}
+      </List>
+    </Drawer>
   );
 };
 

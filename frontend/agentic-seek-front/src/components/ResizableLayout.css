@@ -20,6 +20,10 @@
   align-items: center;
   justify-content: center;
   transition: background-color 0.3s ease;
+  /* 在移动端禁用复杂动画 */
+  @media (max-width: 1023px) {
+    transition: none;
+  }
   position: relative;
   flex-shrink: 0;
 }
@@ -34,6 +38,10 @@
   background-color: var(--border);
   border-radius: 2px;
   transition: all 0.3s ease;
+  /* 在移动端禁用复杂动画 */
+  @media (max-width: 1023px) {
+    transition: none;
+  }
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -41,31 +49,97 @@
   background-color: var(--accent-foreground);
   height: 80px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  /* 在移动端禁用复杂动画 */
+  @media (max-width: 1023px) {
+    height: 60px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .resizable-container.dragging .resize-handle {
   background-color: var(--accent);
+  /* 在移动端禁用复杂动画 */
+  @media (max-width: 1023px) {
+    background-color: transparent;
+  }
 }
 
 .resizable-container.dragging .resize-handle-line {
   background-color: var(--accent-foreground);
   height: 100vh;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  /* 在移动端禁用复杂动画 */
+  @media (max-width: 1023px) {
+    height: 60px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
 }
 
 /* Mobile responsiveness */
-@media (max-width: 768px) {
+/* xs: 0px - 599px (Mobile) */
+@media (max-width: 599px) {
   .resizable-container {
     flex-direction: column;
+    height: auto !important;
   }
 
   .resizable-left,
   .resizable-right {
     width: 100% !important;
-    height: 50vh;
+    height: 50vh !important;
   }
 
   .resize-handle {
     display: none;
+  }
+}
+
+/* sm: 600px - 1023px (Tablet) */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .resizable-container {
+    flex-direction: column;
+    height: auto !important;
+  }
+
+  .resizable-left,
+  .resizable-right {
+    width: 100% !important;
+    height: 50vh !important;
+  }
+
+  .resize-handle {
+    display: none;
+  }
+}
+
+/* md: 1024px - 1439px (Laptop) */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .resize-handle {
+    width: 10px;
+  }
+
+  .resize-handle-line {
+    width: 2px;
+    height: 50px;
+  }
+
+  .resize-handle:hover .resize-handle-line {
+    height: 70px;
+  }
+}
+
+/* lg: 1440px+ (Desktop) */
+@media (min-width: 1440px) {
+  .resize-handle {
+    width: 12px;
+  }
+
+  .resize-handle-line {
+    width: 3px;
+    height: 60px;
+  }
+
+  .resize-handle:hover .resize-handle-line {
+    height: 80px;
   }
 }

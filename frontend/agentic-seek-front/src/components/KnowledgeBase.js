@@ -1,10 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import {
+  Card,
+  CardContent,
+  CardActions,
+  List,
+  ListItem,
+  ListItemText,
+  TextField,
+  Button,
+  IconButton,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Typography,
+  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel,
+  Grid,
+  Chip,
+  Tooltip,
+  CircularProgress,
+  Alert,
+  Fab,
+  useMediaQuery,
+  useTheme,
+  Fade
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Search as SearchIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  ExpandMore as ExpandMoreIcon,
+  Close as CloseIcon
+} from '@mui/icons-material';
+import { usePerformance } from '../contexts/PerformanceContext';
+import { optimizeComponentAnimation } from '../utils/animationOptimizer';
 import './KnowledgeBase.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:7777';
 
 const KnowledgeBase = () => {
+  const theme = useTheme();
+  const { shouldUseAnimation, animationComplexity } = usePerformance();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  
   const [knowledgeRecords, setKnowledgeRecords] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -208,209 +259,475 @@ const KnowledgeBase = () => {
   }, []);
 
   return (
-    <div className="knowledge-base">
-      <div className="knowledge-header">
-        <h2>知识库</h2>
-        <div className="header-actions">
-          <button 
-            className="add-button"
-            onClick={() => {
-              setFormData({
-                question: '',
-                description: '',
-                answer: '',
-                public: false,
-                embeddingId: 0,
-                model_name: '',
-                tool_id: 1,
-                params: '{}'
-              });
-              setIsEditing(false);
-              setCurrentRecordId(null);
-              setShowForm(true);
-            }}
-          >
-            添加记录
-          </button>
-          <form className="search-form" onSubmit={handleSearch}>
-            <input
-              type="text"
-              placeholder="搜索知识记录..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-            <button type="submit" className="search-button">
-              搜索
-            </button>
-          </form>
-        </div>
-      </div>
+    <Box className="knowledge-base">
+      <Card className="knowledge-header" elevation={2}>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+            <Typography variant="h4" component="h2" sx={{ fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' } }}>
+              知识库
+            </Typography>
+            <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setFormData({
+                    question: '',
+                    description: '',
+                    answer: '',
+                    public: false,
+                    embeddingId: 0,
+                    model_name: '',
+                    tool_id: 1,
+                    params: '{}'
+                  });
+                  setIsEditing(false);
+                  setCurrentRecordId(null);
+                  setShowForm(true);
+                }}
+                sx={{
+                  minWidth: { xs: 44, sm: 48, md: 52 },
+                  height: { xs: 44, sm: 48, md: 52 },
+                  fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' }
+                }}
+              >
+                添加记录
+              </Button>
+              /* 在移动端禁用复杂动画 */
+              sx={{
+                ...((theme) => ({
+                  '@media (max-width: 1023px)': {
+                    transition: 'none',
+                  },
+                }))(theme),
+              }}
+              <Box component="form" onSubmit={handleSearch} display="flex" gap={1}>
+                <TextField
+                  variant="outlined"
+                  placeholder="搜索知识记录..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  InputProps={{
+                    startAdornment: <SearchIcon color="action" />,
+                    sx: {
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }
+                  }}
+                  sx={{
+                    width: { xs: 100, sm: 150, md: 200 },
+                    '& .MuiOutlinedInput-root': {
+                      height: { xs: 44, sm: 48, md: 52 }
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  type="submit"
+                  startIcon={<SearchIcon />}
+                  sx={{
+                    minWidth: { xs: 44, sm: 48, md: 52 },
+                    height: { xs: 44, sm: 48, md: 52 },
+                    /* 在移动端禁用复杂动画 */
+                    '@media (max-width: 1023px)': {
+                      transition: 'none',
+                    },
+                    fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' }
+                  }}
+                >
+                  搜索
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
       
-      <div className="knowledge-content">
+      <Box className="knowledge-content" mt={2}>
         {loading && !showForm ? (
-          <p className="loading">加载中...</p>
+          <Fade in={loading} timeout={shouldUseAnimation() ? 200 : 0}>
+            <Box display="flex" justifyContent="center" alignItems="center" height="200px">
+              <CircularProgress />
+            </Box>
+          </Fade>
         ) : error && !showForm ? (
-          <p className="error">{error}</p>
+          <Alert severity="error">{error}</Alert>
         ) : showForm ? (
-          <div className="form-overlay">
-            <div className="form-container">
-              <h3>{isEditing ? '编辑知识记录' : '添加知识记录'}</h3>
-              <form onSubmit={isEditing ? handleEditFormSubmit : handleAddFormSubmit} className="knowledge-form">
-                <div className="form-group">
-                  <label htmlFor="question">问题:</label>
-                  <input
-                    type="text"
-                    id="question"
-                    name="question"
-                    value={formData.question}
-                    onChange={handleInputChange}
-                    className="form-input"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="description">描述:</label>
-                  <textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    className="form-textarea"
-                    rows="3"
-                    required
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="answer">答案:</label>
-                  <textarea
-                    id="answer"
-                    name="answer"
-                    value={formData.answer}
-                    onChange={handleInputChange}
-                    className="form-textarea"
-                    rows="5"
-                    required
-                  />
-                </div>
-                
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="model_name">模型名称:</label>
-                    <input
-                      type="text"
-                      id="model_name"
+          <Dialog
+            open={showForm}
+            onClose={() => setShowForm(false)}
+            maxWidth="md"
+            fullWidth
+          >
+            <DialogTitle>
+              {isEditing ? '编辑知识记录' : '添加知识记录'}
+              <IconButton
+                aria-label="close"
+                onClick={() => setShowForm(false)}
+                sx={{
+                  position: 'absolute',
+                  right: 8,
+                  top: 8,
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+            <DialogContent>
+              <Box component="form" onSubmit={isEditing ? handleEditFormSubmit : handleAddFormSubmit}>
+                <Grid container spacing={2} mt={1}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="问题"
+                      name="question"
+                      value={formData.question}
+                      onChange={handleInputChange}
+                      required
+                      variant="outlined"
+                      InputProps={{
+                        sx: {
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: { xs: 'auto', sm: 'auto' },
+                          minHeight: { xs: 44, sm: 52 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="描述"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      required
+                      variant="outlined"
+                      multiline
+                      rows={3}
+                      InputProps={{
+                        sx: {
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          minHeight: { xs: 100, sm: 120 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="答案"
+                      name="answer"
+                      value={formData.answer}
+                      onChange={handleInputChange}
+                      required
+                      variant="outlined"
+                      multiline
+                      rows={5}
+                      InputProps={{
+                        sx: {
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          minHeight: { xs: 150, sm: 200 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="模型名称"
                       name="model_name"
                       value={formData.model_name}
                       onChange={handleInputChange}
-                      className="form-input"
                       required
+                      variant="outlined"
+                      InputProps={{
+                        sx: {
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: { xs: 'auto', sm: 'auto' },
+                          minHeight: { xs: 44, sm: 52 }
+                        }
+                      }}
                     />
-                  </div>
+                  </Grid>
                   
-                  <div className="form-group">
-                    <label htmlFor="tool_id">工具ID:</label>
-                    <input
-                      type="number"
-                      id="tool_id"
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="工具ID"
                       name="tool_id"
+                      type="number"
                       value={formData.tool_id}
                       onChange={handleInputChange}
-                      className="form-input"
                       required
+                      variant="outlined"
+                      InputProps={{
+                        sx: {
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: { xs: 'auto', sm: 'auto' },
+                          minHeight: { xs: 44, sm: 52 }
+                        }
+                      }}
                     />
-                  </div>
-                </div>
-                
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="embeddingId">嵌入ID:</label>
-                    <input
-                      type="number"
-                      id="embeddingId"
+                  </Grid>
+                  
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      label="嵌入ID"
                       name="embeddingId"
+                      type="number"
                       value={formData.embeddingId}
                       onChange={handleInputChange}
-                      className="form-input"
                       required
+                      variant="outlined"
+                      InputProps={{
+                        sx: {
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          height: { xs: 'auto', sm: 'auto' },
+                          minHeight: { xs: 44, sm: 52 }
+                        }
+                      }}
                     />
-                  </div>
+                  </Grid>
                   
-                  <div className="form-group checkbox-group">
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="public"
-                        checked={formData.public}
-                        onChange={handleInputChange}
-                        className="form-checkbox"
-                      />
-                      公开
-                    </label>
-                  </div>
-                </div>
-                
-                <div className="form-group">
-                  <label htmlFor="params">参数 (JSON格式):</label>
-                  <textarea
-                    id="params"
-                    name="params"
-                    value={formData.params}
-                    onChange={handleInputChange}
-                    className="form-textarea"
-                    rows="3"
-                    required
-                  />
-                </div>
-                
-                <div className="form-actions">
-                  <button type="button" className="cancel-button" onClick={() => setShowForm(false)}>
-                    取消
-                  </button>
-                  <button type="submit" className="submit-button" disabled={loading}>
-                    {loading ? (isEditing ? '更新中...' : '提交中...') : (isEditing ? '更新记录' : '添加记录')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          name="public"
+                          checked={formData.public}
+                          onChange={handleInputChange}
+                        />
+                      }
+                      label="公开"
+                    />
+                  </Grid>
+                  
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="参数 (JSON格式)"
+                      name="params"
+                      value={formData.params}
+                      onChange={handleInputChange}
+                      required
+                      variant="outlined"
+                      multiline
+                      rows={3}
+                      InputProps={{
+                        sx: {
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          minHeight: { xs: 100, sm: 120 }
+                        }
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setShowForm(false)} color="secondary">
+                取消
+              </Button>
+              <Button 
+                onClick={isEditing ? handleEditFormSubmit : handleAddFormSubmit} 
+                variant="contained" 
+                color="primary"
+                disabled={loading}
+              >
+                {loading ? (isEditing ? '更新中...' : '提交中...') : (isEditing ? '更新记录' : '添加记录')}
+              </Button>
+            </DialogActions>
+          </Dialog>
         ) : knowledgeRecords.length === 0 ? (
-          <p className="placeholder">暂无知识记录</p>
+          <Box display="flex" justifyContent="center" alignItems="center" height="200px">
+            <Typography variant="h6" color="textSecondary">
+              暂无知识记录
+            </Typography>
+          </Box>
         ) : (
-          <div className="knowledge-list">
-            {knowledgeRecords.map((record) => (
-              <div key={record.id} className="knowledge-item">
-                <h3 className="knowledge-question">{record.question}</h3>
-                <p className="knowledge-description">{record.description}</p>
-                <div className="knowledge-answer">
-                  <p>{record.answer}</p>
-                </div>
-                <div className="knowledge-meta">
-                  <span className="knowledge-model">模型: {record.model_name}</span>
-                  <span className="knowledge-tool">工具ID: {record.tool_id}</span>
-                </div>
-                <div className="knowledge-actions">
-                  <button 
-                    className="edit-button"
-                    onClick={() => openEditForm(record)}
+          <List className="knowledge-list">
+            {knowledgeRecords.map((record, index) => (
+              <Fade
+                key={record.id}
+                in={true}
+                timeout={shouldUseAnimation() ? (index * 100 + 300) : 0} // 逐个延迟进入，符合Material Design规范
+              >
+                <ListItem className="knowledge-item" disablePadding>
+                  <Card
+                    className="knowledge-card"
+                    variant="outlined"
+                    sx={{
+                      width: '100%',
+                      transition: shouldUseAnimation() ? 'all 0.2s cubic-bezier(0.2, 0, 0, 1)' : 'none', // 使用Material Design标准缓动函数
+                      '&:hover': {
+                        boxShadow: isDark
+                          ? '0 6px 16px rgba(0, 0, 0, 0.3)'
+                          : '0 6px 16px rgba(0, 0, 0, 0.15)',
+                        transform: shouldUseAnimation('high') ? 'translateY(-3px)' : 'none',
+                        /* 在移动端禁用复杂动画 */
+                        '@media (max-width: 1023px)': {
+                          transform: 'none',
+                          boxShadow: isDark
+                            ? '0 2px 10px rgba(0, 0, 0, 0.3)'
+                            : '0 2px 10px rgba(0, 0, 0, 0.1)',
+                        }
+                      }
+                    }}
                   >
-                    编辑
-                  </button>
-                  <button 
-                    className="delete-button"
-                    onClick={() => deleteKnowledgeRecord(record.id)}
-                  >
-                    删除
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+                  <CardContent>
+                    <Typography variant="h6" className="knowledge-question" gutterBottom sx={{ fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } }}>
+                      {record.question}
+                    </Typography>
+                    <Typography variant="body2" className="knowledge-description" color="textSecondary" paragraph sx={{ fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.875rem' } }}>
+                      {record.description}
+                    </Typography>
+                    
+                    <Accordion>
+                      <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        aria-controls={`panel-content-${record.id}`}
+                        id={`panel-header-${record.id}`}
+                      >
+                        <Typography>查看答案</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Typography className="knowledge-answer" paragraph sx={{ fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.875rem' } }}>
+                          {record.answer}
+                        </Typography>
+                      </AccordionDetails>
+                    </Accordion>
+                    
+                    <Box className="knowledge-meta" mt={2} display="flex" flexWrap="wrap" gap={1}>
+                      <Chip label={`模型: ${record.model_name}`} size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' } }} />
+                      <Chip label={`工具ID: ${record.tool_id}`} size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' } }} />
+                      <Chip label={`嵌入ID: ${record.embeddingId}`} size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' } }} />
+                      {record.public && <Chip label="公开" color="primary" size="small" sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' } }} />}
+                    </Box>
+                  </CardContent>
+                  <CardActions>
+                    <Box display="flex" justifyContent="flex-end" width="100%" gap={1}>
+                      <Tooltip title="编辑">
+                        <IconButton
+                          color="primary"
+                          onClick={() => openEditForm(record)}
+                          sx={{
+                            width: { xs: 44, sm: 48, md: 52 },
+                            height: { xs: 44, sm: 48, md: 52 },
+                            '& .MuiSvgIcon-root': {
+                              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' }
+                            },
+                            /* 在移动端禁用复杂动画 */
+                            '@media (max-width: 1023px)': {
+                              transition: 'none',
+                            }
+                          }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="删除">
+                        <IconButton
+                          color="error"
+                          onClick={() => deleteKnowledgeRecord(record.id)}
+                          sx={{
+                            width: { xs: 44, sm: 48, md: 52 },
+                            height: { xs: 44, sm: 48, md: 52 },
+                            '& .MuiSvgIcon-root': {
+                              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' }
+                            },
+                            /* 在移动端禁用复杂动画 */
+                            '@media (max-width: 1023px)': {
+                              transition: 'none',
+                            }
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </CardActions>
+                </Card>
+              </ListItem>
+            </Fade>
+          ))}
+        </List>
+      )}
         )}
-      </div>
-    </div>
+      </Box>
+      
+      {/* Floating Action Button for mobile */}
+      <Fab
+        color="primary"
+        aria-label="add"
+        sx={{
+          position: 'fixed',
+          bottom: { xs: 16, sm: 24 },
+          right: { xs: 16, sm: 24 },
+          display: { xs: 'flex', md: 'none' },
+          width: { xs: 44, sm: 52 },
+          height: { xs: 44, sm: 52 }
+        }}
+        onClick={() => {
+          setFormData({
+            question: '',
+            description: '',
+            answer: '',
+            public: false,
+            embeddingId: 0,
+            model_name: '',
+            tool_id: 1,
+            params: '{}'
+          });
+          setIsEditing(false);
+          setCurrentRecordId(null);
+          setShowForm(true);
+        }}
+      >
+        <AddIcon sx={{ fontSize: { xs: '1.4rem', sm: '1.6rem' } }} />
+      </Fab>
+      {/* 在移动端禁用复杂动画 */}
+      <Box
+        sx={{
+          '@media (max-width: 1023px)': {
+            transition: 'none',
+          },
+        }}
+      />
+    </Box>
   );
 };
 

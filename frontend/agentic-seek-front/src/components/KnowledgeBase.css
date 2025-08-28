@@ -4,454 +4,144 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .knowledge-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem 1.5rem;
-  background-color: var(--card);
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  margin-bottom: 1.5rem;
-}
-
-.knowledge-header h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0;
-  color: var(--foreground);
-  display: flex;
-  align-items: center;
-  min-height: 68px; /* 与ChatInterface标题高度保持一致 */
-}
-
-.header-actions {
-  display: flex;
-  gap: 1.25rem;
-  align-items: center;
-}
-
-.add-button {
-  padding: 0.625rem 1.25rem;
-  border-radius: 12px;
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.add-button::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
-  transition: left 0.5s ease;
-}
-
-.add-button:hover::before {
-  left: 100%;
-}
-
-.add-button:hover {
-  background-color: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-.search-form {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.search-input {
-  padding: 0.625rem 1.25rem;
-  border-radius: 12px;
-  background-color: var(--input);
-  color: var(--input-foreground);
-  font-size: 1rem;
-  width: 300px;
-  transition: all 0.3s ease;
-  border: none;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.search-input:focus {
-  outline: none;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05), 0 0 0 3px var(--accent-hover);
-}
-
-.search-input::placeholder {
-  color: var(--muted-foreground);
-}
-
-.search-button {
-  padding: 0.625rem 1.25rem;
-  border-radius: 12px;
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.search-button::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
-  transition: left 0.5s ease;
-}
-
-.search-button:hover::before {
-  left: 100%;
-}
-
-.search-button:hover {
-  background-color: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 16px;
 }
 
 .knowledge-content {
   flex: 1;
-  padding: 0;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.loading, .error, .placeholder {
-  color: var(--muted-foreground);
-  text-align: center;
-  font-size: 1.1rem;
-  margin: auto;
-}
-
-.error {
-  color: var(--destructive);
 }
 
 .knowledge-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 16px;
+  padding: 0;
 }
 
 .knowledge-item {
-  background-color: var(--card);
-  border-radius: 16px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
 .knowledge-item:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateX(4px);
+}
+
+.knowledge-item:active {
+  transform: translateX(2px);
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.knowledge-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 在移动端禁用复杂动画 */
+  @media (max-width: 1023px) {
+    transition: none;
+  }
+}
+
+.knowledge-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  /* 在移动端禁用复杂动画 */
+  @media (max-width: 1023px) {
+    transform: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.knowledge-card:active {
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .knowledge-question {
-  font-size: 1.25rem;
   font-weight: 600;
-  margin: 0 0 0.75rem 0;
-  color: var(--foreground);
+  margin-bottom: 8px;
 }
 
 .knowledge-description {
-  font-size: 1rem;
-  color: var(--muted-foreground);
-  margin: 0 0 1.25rem 0;
-  line-height: 1.6;
+  margin-bottom: 16px;
 }
 
 .knowledge-answer {
-  background-color: var(--muted);
-  border-radius: 12px;
-  padding: 1.25rem;
-  margin-bottom: 1.25rem;
-  font-size: 1rem;
   line-height: 1.6;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .knowledge-meta {
-  display: flex;
-  gap: 1.25rem;
-  font-size: 0.9rem;
-  color: var(--muted-foreground);
-  margin-bottom: 1.25rem;
-}
-
-.knowledge-model, .knowledge-tool {
-  background-color: var(--muted);
-  padding: 0.375rem 0.75rem;
-  border-radius: 20px;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.knowledge-actions {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
-}
-
-.edit-button, .delete-button {
-  padding: 0.625rem 1.25rem;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.edit-button {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-.edit-button:hover {
-  background-color: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-.delete-button {
-  background-color: var(--destructive);
-  color: var(--destructive-foreground);
-}
-
-.delete-button:hover {
-  background-color: var(--destructive-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* 表单覆盖层 */
-.form-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-/* 表单容器 */
-.form-container {
-  background-color: var(--card);
-  border-radius: 20px;
-  padding: 2rem;
-  width: 90%;
-  max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-}
-
-.form-container h3 {
-  margin-top: 0;
-  color: var(--foreground);
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 1.75rem;
-  text-align: center;
-}
-
-/* 表单 */
-.knowledge-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-/* 表单组 */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.form-row {
-  display: flex;
-  gap: 1.25rem;
-}
-
-.form-row .form-group {
-  flex: 1;
-}
-
-.form-group label {
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--foreground);
-}
-
-/* 表单输入 */
-.form-input, .form-textarea {
-  padding: 0.875rem;
-  border-radius: 12px;
-  background-color: var(--input);
-  color: var(--input-foreground);
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  width: 100%;
-  box-sizing: border-box;
-  border: none;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.form-input:focus, .form-textarea:focus {
-  outline: none;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05), 0 0 0 3px var(--accent-hover);
-}
-
-.form-textarea {
-  resize: vertical;
-  min-height: 100px;
-}
-
-.form-checkbox {
-  margin-right: 0.75rem;
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.checkbox-group {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-/* 表单操作 */
-.form-actions {
-  display: flex;
-  gap: 1.25rem;
-  justify-content: flex-end;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-}
-
-.cancel-button, .submit-button {
-  padding: 0.875rem 1.75rem;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border: none;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.cancel-button {
-  background-color: var(--secondary);
-  color: var(--secondary-foreground);
-}
-
-.cancel-button:hover {
-  background-color: var(--secondary-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-.submit-button {
-  background-color: var(--accent);
-  color: var(--accent-foreground);
-}
-
-.submit-button:hover {
-  background-color: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
-
-.submit-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
+/* xs: 0px - 599px (Mobile) */
+@media (max-width: 599px) {
+  .knowledge-base {
+    padding: 8px;
+  }
+  
   .knowledge-header {
-    flex-direction: column;
-    gap: 1.25rem;
-    align-items: stretch;
-    padding: 1rem;
+    margin-bottom: 12px;
   }
   
-  .header-actions {
-    flex-direction: column;
-    gap: 0.75rem;
+  .knowledge-list {
+    gap: 12px;
   }
   
-  .search-form {
-    width: 100%;
+  /* 在小屏幕上隐藏桌面端的浮动按钮 */
+  .MuiFab-root {
+    display: flex !important;
+  }
+}
+
+/* sm: 600px - 1023px (Tablet) */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .knowledge-base {
+    padding: 12px;
   }
   
-  .search-input {
-    width: 100%;
+  .knowledge-header {
+    margin-bottom: 14px;
   }
   
-  .form-row {
-    flex-direction: column;
-    gap: 1.25rem;
+  .knowledge-list {
+    gap: 14px;
+  }
+}
+
+/* md: 1024px - 1439px (Laptop) */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .knowledge-base {
+    padding: 16px;
   }
   
-  .form-container {
-    width: 95%;
-    padding: 1.5rem;
+  .knowledge-header {
+    margin-bottom: 16px;
   }
   
-  .form-actions {
-    flex-direction: column;
+  .knowledge-list {
+    gap: 16px;
+  }
+}
+
+/* lg: 1440px+ (Desktop) */
+@media (min-width: 1440px) {
+  .knowledge-base {
+    padding: 24px;
   }
   
-  .knowledge-actions {
-    flex-direction: column;
+  .knowledge-header {
+    margin-bottom: 24px;
   }
   
-  .knowledge-item {
-    padding: 1.25rem;
-  }
-  
-  .knowledge-question {
-    font-size: 1.1rem;
+  .knowledge-list {
+    gap: 24px;
   }
 }

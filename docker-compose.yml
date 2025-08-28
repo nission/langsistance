@@ -80,7 +80,8 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend/agentic-seek-front/src:/app/src:rw,z
+      - ./frontend/agentic-seek-front/src:/app/src:rw
+      - /app/node_modules
       - ./screenshots:/app/screenshots
     environment:
       - NODE_ENV=development
