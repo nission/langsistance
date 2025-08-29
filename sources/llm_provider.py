@@ -41,14 +41,8 @@ class Provider:
         self.api_key = None
         self.internal_url, self.in_docker = self.get_internal_url()
         self.unsafe_providers = ["openai", "deepseek", "dsk_deepseek", "together", "google", "openrouter"]
-<<<<<<< HEAD
-=======
-        if self.provider_name not in self.available_providers:
-            raise ValueError(f"Unknown provider: {provider_name}")
->>>>>>> 715e786 (gc开发环境)
-        self.logger.info(f"provider_name:{self.provider_name}")
-        if self.provider_name not in self.available_providers:
-            raise ValueError(f"Unknown provider: {provider_name}")
+        #if self.provider_name not in self.available_providers:
+           #raise ValueError(f"Unknown provider: {provider_name}")
         if self.provider_name in self.unsafe_providers and self.is_local == False:
             pretty_print("Warning: you are using an API provider. You data will be sent to the cloud.", color="warning")
             self.api_key = self.get_api_key(self.provider_name)
@@ -223,12 +217,13 @@ class Provider:
         """
         self.logger.info(f"api key:{self.api_key}")
         self.logger.info(f"history:{history}")
-        client = OpenAI(api_key=self.api_key)
-        # llm = ChatOpenAI(
-        #     self.model,
-        #     openai_api_key=self.api_key,
-        #     temperature=0
-        # )
+        # client = OpenAI(api_key=self.api_key)
+        llm = ChatOpenAI(
+            model=self.model,
+            api_key=self.api_key,
+            temperature=0
+        )
+        agent = llm.bind_tools(tools)
 
         # messages = [
         #     SystemMessage(content=history["system"]),
@@ -244,15 +239,23 @@ class Provider:
             # )
             #
             # response = agent.run(messages)
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=history,
-                tools=tools,
-                temperature=0
-            )
+            # response = client.chat.completions.create(
+            #     model=self.model,
+            #     messages=history,
+            #     tools=tools,
+            #     temperature=0
+            # )
+            response = agent.invoke(history)
+            self.logger.info(f"response:{response}")
             if response is None:
                 raise Exception("OpenAI response is empty.")
-            thought = response.choices[0].message.content
+
+            if response.tool_calls:
+                print("模型请求调用工具:")
+                for tool_call in response.tool_calls:
+                    self.logger.info(f"工具名称: {tool_call.function.name}")
+                    self.logger.info(f"工具参数: {tool_call.function.arguments}")
+            thought = response.content
             if verbose:
                 print(thought)
             return thought

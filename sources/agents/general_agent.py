@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Coroutine
 
 from sources.knowledge.knowledge import get_user_knowledge
 from sources.utility import pretty_print, animate_thinking
@@ -89,15 +89,13 @@ class GeneralAgent(Agent):
         try:
             client = MCPClient.from_config_file("tool_config.json")
             adapter = LangChainAdapter()
-            self.logger.info(f"get_tools")
-
             tools = await adapter.create_tools(client)
             self.logger.info(f"tools{tools}")
             return tools
         except Exception as e:
             raise Exception(f"get_tool failed: {str(e)}") from e
 
-    async def process(self,user_id, prompt, speech_module) -> str:
+    async def process(self,user_id, prompt, speech_module) -> str | tuple[str, str]:
         if not self.enabled:
             return "MCP Agent is disabled."
         self.knowledgeTool = get_user_knowledge(user_id)
@@ -114,8 +112,8 @@ class GeneralAgent(Agent):
             self.logger.info(f"tools:{self.tools}")
             animate_thinking("Thinking...", color="status")
             answer, reasoning = await self.llm_request()
-            exec_success, _ = self.execute_modules(answer)
-            answer = self.remove_blocks(answer)
+            # exec_success, _ = self.execute_modules(answer)
+            # answer = self.remove_blocks(answer)
             self.last_answer = answer
             self.status_message = "Ready"
             if len(self.blocks_result) == 0:

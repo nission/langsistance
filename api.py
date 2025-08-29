@@ -299,6 +299,5 @@ async def process_query(request: QueryRequest):
         logger.info("Processing finished")
         if config.getboolean('MAIN', 'save_session'):
             interaction.save_session()
-            
 if __name__ == "__main__":
     uvicorn.run(api, host="0.0.0.0", port=7777)
