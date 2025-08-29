@@ -218,12 +218,13 @@ class Provider:
         """
         self.logger.info(f"api key:{self.api_key}")
         self.logger.info(f"history:{history}")
-        client = OpenAI(api_key=self.api_key)
-        # llm = ChatOpenAI(
-        #     self.model,
-        #     openai_api_key=self.api_key,
-        #     temperature=0
-        # )
+        # client = OpenAI(api_key=self.api_key)
+        llm = ChatOpenAI(
+            model=self.model,
+            api_key=self.api_key,
+            temperature=0
+        )
+        agent = llm.bind_tools(tools)
 
         # messages = [
         #     SystemMessage(content=history["system"]),
@@ -239,15 +240,23 @@ class Provider:
             # )
             #
             # response = agent.run(messages)
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=history,
-                tools=tools,
-                temperature=0
-            )
+            # response = client.chat.completions.create(
+            #     model=self.model,
+            #     messages=history,
+            #     tools=tools,
+            #     temperature=0
+            # )
+            response = agent.invoke(history)
+            self.logger.info(f"response:{response}")
             if response is None:
                 raise Exception("OpenAI response is empty.")
-            thought = response.choices[0].message.content
+
+            if response.tool_calls:
+                print("模型请求调用工具:")
+                for tool_call in response.tool_calls:
+                    self.logger.info(f"工具名称: {tool_call.function.name}")
+                    self.logger.info(f"工具参数: {tool_call.function.arguments}")
+            thought = response.content
             if verbose:
                 print(thought)
             return thought
