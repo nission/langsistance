@@ -44,6 +44,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { usePerformance } from '../contexts/PerformanceContext';
+import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import { optimizeComponentAnimation } from '../utils/animationOptimizer';
 import './KnowledgeBase.css';
 
@@ -51,6 +52,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:7777'
 
 const KnowledgeBase = () => {
   const theme = useTheme();
+  const { isDark } = useAppTheme();
   const { shouldUseAnimation, animationComplexity } = usePerformance();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
@@ -294,14 +296,6 @@ const KnowledgeBase = () => {
               >
                 添加记录
               </Button>
-              /* 在移动端禁用复杂动画 */
-              sx={{
-                ...((theme) => ({
-                  '@media (max-width: 1023px)': {
-                    transition: 'none',
-                  },
-                }))(theme),
-              }}
               <Box component="form" onSubmit={handleSearch} display="flex" gap={1}>
                 <TextField
                   variant="outlined"
@@ -686,7 +680,6 @@ const KnowledgeBase = () => {
           ))}
         </List>
       )}
-        )}
       </Box>
       
       {/* Floating Action Button for mobile */}

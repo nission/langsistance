@@ -5,145 +5,315 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Toolbar,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Box,
+  Typography,
+  IconButton
 } from '@mui/material';
-import { Chat as ChatIcon, Book as KnowledgeIcon, Settings as SettingsIcon } from '@mui/icons-material';
+import { 
+  Chat as ChatIcon, 
+  Book as KnowledgeIcon, 
+  Settings as SettingsIcon,
+  Close as CloseIcon
+} from '@mui/icons-material';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
-import { usePerformance } from '../contexts/PerformanceContext';
 
-const Sidebar = ({ activeTab, onTabChange }) => {
+const Sidebar = ({ activeTab, onTabChange, open, onClose }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { isDark } = useAppTheme();
-  const { shouldUseAnimation } = usePerformance();
 
-  const drawerWidth = isMobile ? 72 : isTablet ? 180 : 220;
+  const drawerWidth = isMobile ? 280 : isTablet ? 300 : 320;
 
   const menuItems = [
     {
       id: 'chat',
       label: '聊天',
       icon: <ChatIcon />,
+      description: '智能对话助手'
     },
     {
       id: 'knowledge',
       label: '知识库',
       icon: <KnowledgeIcon />,
+      description: '知识管理中心'
     },
     {
       id: 'settings',
       label: '设置',
       icon: <SettingsIcon />,
+      description: '系统配置'
     },
   ];
 
+  const handleItemClick = (itemId) => {
+    onTabChange(itemId);
+    onClose(); // 选择后自动关闭侧边栏
+  };
+
   return (
     <Drawer
-      variant="permanent"
+      variant="temporary"
+      anchor="left"
+      open={open}
+      onClose={onClose}
+      ModalProps={{
+        keepMounted: true, // 提升移动端性能
+      }}
       sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        [`& .MuiDrawer-paper`]: {
+        '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
-          borderRight: `1px solid ${isDark ? theme.palette.divider : 'rgba(0, 0, 0, 0.08)'}`,
-          backgroundColor: isDark ? theme.palette.background.paper : theme.palette.background.default,
-          boxShadow: isDark ? '2px 0 20px rgba(0, 0, 0, 0.3)' : '2px 0 20px rgba(0, 0, 0, 0.08)',
-          borderRadius: isMobile ? '0 12px 0 0' : '0 24px 0 0',
-          overflow: 'hidden',
+          borderRight: 'none',
+          backgroundColor: isDark ? 'rgba(10, 10, 11, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: isDark
+            ? '4px 0 32px rgba(0, 0, 0, 0.5)'
+            : '4px 0 32px rgba(0, 0, 0, 0.15)',
+          overflow: 'hidden', // 防止内容溢出导致跳动
           position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 24,
-            background: `linear-gradient(180deg, ${isDark ? theme.palette.background.paper : theme.palette.background.default} 60%, transparent)`,
-            borderRadius: isMobile ? '0 12px 0 0' : '0 24px 0 0',
-            zIndex: 1,
-          },
+          // 确保固定高度，防止内容变化时的跳动
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
         },
       }}
     >
-      <Toolbar /> {/* 空的Toolbar用于占据AppBar的空间 */}
-      <List sx={{ 
-        padding: isMobile ? '0.75rem 0' : isTablet ? '1rem 0' : '1.5rem 0',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: isMobile ? '0.5rem' : isTablet ? '0.75rem' : '0.75rem',
-      }}>
-        {menuItems.map((item) => (
-          <ListItem
-            key={item.id}
-            button
-            onClick={() => onTabChange(item.id)}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: isMobile ? 'center' : 'flex-start',
-              padding: isMobile ? '1.25rem' : isTablet ? '1rem 1.1rem' : '1rem 1.25rem',
-              borderRadius: isMobile ? '12px' : isTablet ? '14px' : '16px',
-              backgroundColor: activeTab === item.id ?
-                (isDark ? theme.palette.primary.dark : theme.palette.primary.light) :
-                'transparent',
-              color: activeTab === item.id ? 
-                (isDark ? theme.palette.primary.contrastText : theme.palette.primary.main) : 
-                (isDark ? theme.palette.text.primary : theme.palette.text.secondary),
-              boxShadow: activeTab === item.id ? 
-                (isDark ? '0 4px 12px rgba(0, 0, 0, 0.3)' : '0 4px 12px rgba(0, 0, 0, 0.12)') : 
-                'none',
-              transition: 'all 0.3s ease',
-              /* 在移动端禁用复杂动画 */
-              '@media (max-width: 1023px)': {
-                transition: 'none',
-              },
-              position: 'relative',
-              overflow: 'hidden',
-              '&:hover': {
-                backgroundColor: activeTab === item.id ? 
-                  (isDark ? theme.palette.primary.main : theme.palette.primary.light) : 
-                  (isDark ? theme.palette.action.hover : theme.palette.action.selected),
-                color: activeTab === item.id ? 
-                  (isDark ? theme.palette.primary.contrastText : theme.palette.primary.main) : 
-                  theme.palette.text.primary,
-                transform: isMobile ? 'none' : 'translateY(-2px)',
-                /* 在移动端禁用复杂动画 */
-                '@media (max-width: 1023px)': {
-                  transform: 'none',
-                },
-                boxShadow: activeTab === item.id ? 
-                  (isDark ? '0 6px 16px rgba(0, 0, 0, 0.3)' : '0 6px 16px rgba(0, 0, 0, 0.15)') : 
-                  (isDark ? '0 6px 16px rgba(0, 0, 0, 0.1)' : '0 6px 16px rgba(0, 0, 0, 0.1)'),
-              },
-              '& .MuiListItemIcon-root': {
-                minWidth: isMobile ? 'auto' : isTablet ? '36px' : '44px',
-                color: 'inherit',
-                fontSize: isMobile ? '1.5rem' : isTablet ? '1.35rem' : '1.5rem',
-              },
+      {/* 侧边栏头部 */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          p: 2,
+          borderBottom: '1px solid',
+          borderColor: isDark ? 'rgba(39, 39, 42, 0.5)' : 'rgba(229, 231, 235, 0.8)',
+          background: isDark 
+            ? 'linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)'
+            : 'linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%)',
+        }}
+      >
+        <Box>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontSize: '1.25rem',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em'
             }}
           >
-            <ListItemIcon>
-              {item.icon}
-            </ListItemIcon>
-            {!isMobile && (
-              <ListItemText 
-                primary={item.label}
+            AgenticSeek
+          </Typography>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: 'text.secondary',
+              fontSize: '0.75rem',
+              display: 'block',
+              mt: 0.25
+            }}
+          >
+            智能助手平台
+          </Typography>
+        </Box>
+        <IconButton
+          onClick={onClose}
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: 2,
+            backgroundColor: isDark ? 'rgba(39, 39, 42, 0.8)' : 'rgba(0, 0, 0, 0.05)',
+            color: 'text.secondary',
+            '&:hover': {
+              backgroundColor: isDark ? 'rgba(63, 63, 70, 0.8)' : 'rgba(0, 0, 0, 0.1)',
+              color: 'text.primary',
+            },
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </Box>
+      
+      {/* 侧边栏主体 */}
+      <Box
+        sx={{
+          flex: 1, // 使用 flex: 1 而不是 height: '100%'
+          display: 'flex',
+          flexDirection: 'column',
+          p: 2,
+          gap: 2,
+          overflow: 'hidden', // 防止内容溢出
+        }}
+      >
+        {/* 导航区域 */}
+        <Box
+          sx={{
+            backgroundColor: isDark ? 'rgba(24, 24, 27, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: isDark ? 'rgba(39, 39, 42, 0.5)' : 'rgba(229, 231, 235, 0.8)',
+            boxShadow: isDark 
+              ? '0 8px 32px rgba(0, 0, 0, 0.3)' 
+              : '0 8px 32px rgba(0, 0, 0, 0.1)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* 菜单列表 */}
+          <List sx={{
+            p: 2,
+            pt: 2.5,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.5,
+          }}>
+            {menuItems.map((item) => (
+              <ListItem
+                key={item.id}
+                button
+                onClick={() => handleItemClick(item.id)}
                 sx={{
-                  '& .MuiListItemText-primary': {
-                    fontSize: isTablet ? '0.9rem' : '1rem',
-                    fontWeight: 500,
+                  borderRadius: 2,
+                  minHeight: 60, // 稍微减少高度，使界面更紧凑
+                  px: 2,
+                  py: 1.5,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  
+                  // 基础状态
+                  backgroundColor: 'transparent',
+                  color: 'text.secondary',
+                  
+                  // 激活状态
+                  ...(activeTab === item.id && {
+                    backgroundColor: isDark 
+                      ? 'rgba(79, 70, 229, 0.15)' 
+                      : 'rgba(79, 70, 229, 0.08)',
+                    color: 'primary.main',
+                    boxShadow: isDark
+                      ? '0 4px 20px rgba(79, 70, 229, 0.3)'
+                      : '0 4px 20px rgba(79, 70, 229, 0.15)',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: 0,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 4,
+                      height: '60%',
+                      backgroundColor: 'primary.main',
+                      borderRadius: '0 2px 2px 0',
+                    }
+                  }),
+                  
+                  // 悬停状态
+                  '&:hover': {
+                    backgroundColor: activeTab === item.id 
+                      ? (isDark 
+                          ? 'rgba(79, 70, 229, 0.2)' 
+                          : 'rgba(79, 70, 229, 0.12)')
+                      : (isDark 
+                          ? 'rgba(255, 255, 255, 0.05)' 
+                          : 'rgba(0, 0, 0, 0.04)'),
+                    transform: 'translateX(4px)',
+                    color: activeTab === item.id ? 'primary.main' : 'text.primary',
                   },
+                  
+                  // 激活时的悬停状态
+                  ...(activeTab === item.id && {
+                    '&:hover': {
+                      backgroundColor: isDark 
+                        ? 'rgba(79, 70, 229, 0.2)' 
+                        : 'rgba(79, 70, 229, 0.12)',
+                      transform: 'translateX(4px)',
+                    }
+                  })
                 }}
-              />
-            )}
-          </ListItem>
-        ))}
-      </List>
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: 44,
+                    mr: 2,
+                    color: 'inherit',
+                    '& .MuiSvgIcon-root': {
+                      fontSize: '1.5rem',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                
+                <ListItemText 
+                  primary={item.label}
+                  secondary={item.description}
+                  sx={{
+                    '& .MuiListItemText-primary': {
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                      letterSpacing: '-0.01em',
+                      color: 'inherit',
+                    },
+                    '& .MuiListItemText-secondary': {
+                      fontSize: '0.75rem',
+                      color: 'text.secondary',
+                      opacity: 0.8,
+                      mt: 0.25,
+                    },
+                  }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+
+        {/* 底部信息区域 */}
+        <Box
+          sx={{
+            mt: 'auto',
+            p: 2,
+            borderRadius: 3,
+            background: isDark 
+              ? 'linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)'
+              : 'linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(124, 58, 237, 0.05) 100%)',
+            border: '1px solid',
+            borderColor: isDark ? 'rgba(79, 70, 229, 0.2)' : 'rgba(79, 70, 229, 0.1)',
+            textAlign: 'center',
+          }}
+        >
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: 'text.secondary',
+              fontSize: '0.7rem',
+              fontWeight: 500,
+              letterSpacing: '0.02em'
+            }}
+          >
+            AgenticSeek v1.0
+          </Typography>
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              display: 'block',
+              color: 'text.secondary',
+              fontSize: '0.65rem',
+              opacity: 0.7,
+              mt: 0.25
+            }}
+          >
+            智能助手平台
+          </Typography>
+        </Box>
+      </Box>
     </Drawer>
   );
 };

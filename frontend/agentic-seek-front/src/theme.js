@@ -1,9 +1,9 @@
 import { createTheme } from "@mui/material/styles";
 import { colors } from "./colors";
 
-// Material Design 3 theme configuration
+// 现代极简主题配置 - Material Design 3
 export const createAppTheme = (isDark) => {
-  // Define color scheme based on dark/light mode
+  // 基于深色/浅色模式定义配色方案
   const palette = isDark
     ? {
         mode: "dark",
@@ -11,11 +11,13 @@ export const createAppTheme = (isDark) => {
           main: colors.primary,
           light: colors.primaryLight,
           dark: colors.primaryDark,
+          contrastText: colors.white,
         },
         secondary: {
           main: colors.secondary,
           light: colors.secondaryLight,
           dark: colors.secondaryDark,
+          contrastText: colors.white,
         },
         accent: {
           main: colors.accent,
@@ -25,28 +27,42 @@ export const createAppTheme = (isDark) => {
         success: {
           main: colors.success,
           light: colors.successLight,
+          contrastText: colors.white,
         },
         warning: {
           main: colors.warning,
           light: colors.warningLight,
+          contrastText: colors.white,
         },
         error: {
           main: colors.error,
           light: colors.errorLight,
+          contrastText: colors.white,
         },
         info: {
           main: colors.info,
           light: colors.infoLight,
+          contrastText: colors.white,
         },
         background: {
-          default: colors.darkBackground,
-          paper: colors.darkCard,
+          default: colors.dark.background,
+          paper: colors.dark.card,
+        },
+        surface: {
+          main: colors.dark.surface,
+          soft: colors.dark.cardSoft,
         },
         text: {
-          primary: colors.darkText,
-          secondary: colors.darkTextSecondary,
+          primary: colors.dark.text,
+          secondary: colors.dark.textSecondary,
+          disabled: colors.dark.textDisabled,
         },
-        divider: colors.darkBorder,
+        divider: colors.dark.border,
+        action: {
+          hover: colors.dark.hover,
+          selected: colors.dark.active,
+          focus: colors.dark.focus,
+        },
       }
     : {
         mode: "light",
@@ -54,11 +70,13 @@ export const createAppTheme = (isDark) => {
           main: colors.primary,
           light: colors.primaryLight,
           dark: colors.primaryDark,
+          contrastText: colors.white,
         },
         secondary: {
           main: colors.secondary,
           light: colors.secondaryLight,
           dark: colors.secondaryDark,
+          contrastText: colors.white,
         },
         accent: {
           main: colors.accent,
@@ -68,31 +86,45 @@ export const createAppTheme = (isDark) => {
         success: {
           main: colors.success,
           light: colors.successLight,
+          contrastText: colors.white,
         },
         warning: {
           main: colors.warning,
           light: colors.warningLight,
+          contrastText: colors.white,
         },
         error: {
           main: colors.error,
           light: colors.errorLight,
+          contrastText: colors.white,
         },
         info: {
           main: colors.info,
           light: colors.infoLight,
+          contrastText: colors.white,
         },
         background: {
           default: colors.background,
           paper: colors.card,
         },
+        surface: {
+          main: colors.surface,
+          soft: colors.cardSoft,
+        },
         text: {
           primary: colors.textPrimary,
           secondary: colors.textSecondary,
+          disabled: colors.textDisabled,
         },
         divider: colors.border,
+        action: {
+          hover: colors.hover,
+          selected: colors.active,
+          focus: colors.focus,
+        },
       };
 
-  // Create theme with Material Design 3 specifications
+  // 使用 Material Design 3 规范创建主题
   return createTheme({
     palette,
     breakpoints: {
@@ -105,70 +137,188 @@ export const createAppTheme = (isDark) => {
       },
     },
     typography: {
-      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+      fontFamily: '"Inter", "SF Pro Display", "Roboto", "Helvetica", "Arial", sans-serif',
       h1: {
         fontSize: "2.5rem",
-        fontWeight: 500,
+        fontWeight: 600,
+        letterSpacing: "-0.02em",
+        lineHeight: 1.2,
       },
       h2: {
         fontSize: "2rem",
-        fontWeight: 500,
+        fontWeight: 600,
+        letterSpacing: "-0.01em",
+        lineHeight: 1.3,
       },
       h3: {
         fontSize: "1.75rem",
-        fontWeight: 500,
+        fontWeight: 600,
+        letterSpacing: "-0.01em",
+        lineHeight: 1.3,
       },
       h4: {
         fontSize: "1.5rem",
-        fontWeight: 500,
+        fontWeight: 600,
+        letterSpacing: "0em",
+        lineHeight: 1.4,
       },
       h5: {
         fontSize: "1.25rem",
-        fontWeight: 500,
+        fontWeight: 600,
+        letterSpacing: "0em",
+        lineHeight: 1.4,
       },
       h6: {
         fontSize: "1.125rem",
-        fontWeight: 500,
+        fontWeight: 600,
+        letterSpacing: "0em",
+        lineHeight: 1.4,
       },
       body1: {
         fontSize: "1rem",
+        fontWeight: 400,
+        lineHeight: 1.6,
+        letterSpacing: "0.01em",
       },
       body2: {
         fontSize: "0.875rem",
+        fontWeight: 400,
+        lineHeight: 1.5,
+        letterSpacing: "0.01em",
       },
       button: {
         textTransform: "none",
         fontWeight: 500,
+        letterSpacing: "0.02em",
+      },
+      caption: {
+        fontSize: "0.75rem",
+        fontWeight: 400,
+        lineHeight: 1.4,
+        letterSpacing: "0.03em",
       },
     },
     shape: {
-      borderRadius: 12, // Material Design 3 rounded corners
+      borderRadius: 12, // 现代圆角设计
     },
+    shadows: isDark ? [
+      "none",
+      colors.darkShadows.xs,
+      colors.darkShadows.sm,
+      colors.darkShadows.md,
+      colors.darkShadows.lg,
+      colors.darkShadows.xl,
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+      colors.darkShadows["2xl"],
+    ] : [
+      "none",
+      colors.shadows.xs,
+      colors.shadows.sm,
+      colors.shadows.md,
+      colors.shadows.lg,
+      colors.shadows.xl,
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+      colors.shadows["2xl"],
+    ],
     components: {
+      MuiCssBaseline: {
+        styleOverrides: {
+          body: {
+            scrollbarWidth: "thin",
+            scrollbarColor: isDark 
+              ? `${colors.dark.borderSoft} ${colors.dark.background}`
+              : `${colors.borderSoft} ${colors.background}`,
+            "&::-webkit-scrollbar": {
+              width: "8px",
+            },
+            "&::-webkit-scrollbar-track": {
+              background: isDark ? colors.dark.background : colors.background,
+            },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: isDark ? colors.dark.borderSoft : colors.borderSoft,
+              borderRadius: "4px",
+              "&:hover": {
+                backgroundColor: isDark ? colors.dark.border : colors.border,
+              },
+            },
+          },
+        },
+      },
       MuiButtonBase: {
         defaultProps: {
-          disableRipple: false, // 确保启用涟漪效果
+          disableRipple: false,
         },
       },
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: 24, // More rounded buttons for MD3
+            borderRadius: 12,
             textTransform: "none",
             fontWeight: 500,
-            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)", // Material Design standard easing
+            padding: "10px 20px",
+            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+            boxShadow: "none",
             "&:hover": {
-              transform: "translateY(-2px)",
-              boxShadow: "0 6px 12px rgba(0, 0, 0, 0.15)",
+              transform: "translateY(-1px)",
+              boxShadow: isDark ? colors.darkShadows.md : colors.shadows.md,
             },
             "&:active": {
               transform: "translateY(0)",
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
               transition: "all 0.1s cubic-bezier(0.4, 0, 0.2, 1)",
             },
             "&.Mui-disabled": {
               transform: "none",
               boxShadow: "none",
+            },
+          },
+          contained: {
+            background: colors.gradients.primary,
+            color: colors.white,
+            "&:hover": {
+              background: colors.gradients.primary,
+              filter: "brightness(1.1)",
+            },
+          },
+          outlined: {
+            borderColor: isDark ? colors.dark.border : colors.border,
+            color: isDark ? colors.dark.text : colors.textPrimary,
+            "&:hover": {
+              borderColor: palette.primary.main,
+              backgroundColor: isDark ? colors.dark.hover : colors.hover,
             },
           },
         },
@@ -177,15 +327,13 @@ export const createAppTheme = (isDark) => {
         styleOverrides: {
           root: {
             borderRadius: 16,
-            boxShadow: isDark
-              ? "0 2px 10px rgba(0, 0, 0, 0.3)"
-              : "0 2px 10px rgba(0, 0, 0, 0.1)",
+            border: `1px solid ${isDark ? colors.dark.border : colors.borderSoft}`,
+            boxShadow: isDark ? colors.darkShadows.sm : colors.shadows.sm,
             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             "&:hover": {
-              transform: "translateY(-4px)",
-              boxShadow: isDark
-                ? "0 8px 20px rgba(0, 0, 0, 0.4)"
-                : "0 8px 20px rgba(0, 0, 0, 0.15)",
+              transform: "translateY(-2px)",
+              boxShadow: isDark ? colors.darkShadows.lg : colors.shadows.lg,
+              borderColor: isDark ? colors.dark.borderSoft : colors.border,
             },
           },
         },
@@ -194,20 +342,23 @@ export const createAppTheme = (isDark) => {
         styleOverrides: {
           root: {
             "& .MuiOutlinedInput-root": {
+              borderRadius: 12,
+              backgroundColor: isDark ? colors.dark.backgroundSoft : colors.backgroundSoft,
               transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              "&:hover": {
-                "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: isDark ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.3)",
-                },
+              "& fieldset": {
+                borderColor: isDark ? colors.dark.border : colors.borderSoft,
+                borderWidth: "1px",
+              },
+              "&:hover fieldset": {
+                borderColor: isDark ? colors.dark.borderSoft : colors.border,
               },
               "&.Mui-focused": {
-                "& .MuiOutlinedInput-notchedOutline": {
+                backgroundColor: isDark ? colors.dark.card : colors.card,
+                "& fieldset": {
                   borderColor: palette.primary.main,
                   borderWidth: "2px",
                 },
-                boxShadow: isDark
-                  ? `0 0 0 4px ${palette.primary.main}20`
-                  : `0 0 0 4px ${palette.primary.main}30`,
+                boxShadow: `0 0 0 4px ${palette.primary.main}20`,
               },
             },
           },
@@ -217,17 +368,79 @@ export const createAppTheme = (isDark) => {
         styleOverrides: {
           root: {
             borderRadius: 16,
-            boxShadow: isDark
-              ? "0 2px 10px rgba(0, 0, 0, 0.3)"
-              : "0 2px 10px rgba(0, 0, 0, 0.1)",
+            border: `1px solid ${isDark ? colors.dark.border : colors.borderSoft}`,
+            boxShadow: isDark ? colors.darkShadows.sm : colors.shadows.sm,
+            backgroundImage: "none",
+          },
+          elevation1: {
+            boxShadow: isDark ? colors.darkShadows.sm : colors.shadows.sm,
+          },
+          elevation2: {
+            boxShadow: isDark ? colors.darkShadows.md : colors.shadows.md,
+          },
+          elevation3: {
+            boxShadow: isDark ? colors.darkShadows.lg : colors.shadows.lg,
           },
         },
       },
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: isDark ? colors.darkCard : colors.card,
-            color: isDark ? colors.darkText : colors.textPrimary,
+            backgroundColor: isDark ? colors.dark.card : colors.card,
+            color: isDark ? colors.dark.text : colors.textPrimary,
+            boxShadow: isDark ? colors.darkShadows.sm : colors.shadows.sm,
+            borderBottom: `1px solid ${isDark ? colors.dark.border : colors.borderSoft}`,
+            backdropFilter: "blur(20px)",
+            background: isDark 
+              ? `${colors.dark.backdropBlur}`
+              : `${colors.backdropBlur}`,
+          },
+        },
+      },
+      MuiDrawer: {
+        styleOverrides: {
+          paper: {
+            borderRight: `1px solid ${isDark ? colors.dark.border : colors.borderSoft}`,
+            backgroundColor: isDark ? colors.dark.card : colors.card,
+            boxShadow: isDark ? colors.darkShadows.lg : colors.shadows.lg,
+          },
+        },
+      },
+      MuiListItem: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            margin: "4px 8px",
+            "&.Mui-selected": {
+              backgroundColor: isDark ? colors.dark.active : colors.active,
+              "&:hover": {
+                backgroundColor: isDark ? colors.dark.hover : colors.hover,
+              },
+            },
+            "&:hover": {
+              backgroundColor: isDark ? colors.dark.hover : colors.hover,
+            },
+          },
+        },
+      },
+      MuiIconButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: 12,
+            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+            "&:hover": {
+              transform: "scale(1.05)",
+              backgroundColor: isDark ? colors.dark.hover : colors.hover,
+            },
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            borderRadius: 20,
+            fontWeight: 500,
+            fontSize: "0.75rem",
           },
         },
       },

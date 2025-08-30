@@ -2,11 +2,19 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies
-COPY agentic-seek-front/package.json agentic-seek-front/package-lock.json ./
-# RUN npm audit
-# RUN npm audit fix
-RUN npm install --legacy-peer-deps
+# Copy package.json and package-lock.json if it exists
+COPY agentic-seek-front/package*.json ./
+
+# Debug: Show what files we have
+RUN ls -la
+
+# Clean npm cache and install dependencies
+RUN npm cache clean --force
+RUN npm install --legacy-peer-deps --verbose
+
+# Debug: Check if react-scripts is installed
+RUN ls -la node_modules/.bin/ | grep react-scripts || echo "react-scripts not found in .bin"
+RUN npm list react-scripts || echo "react-scripts not in npm list"
 
 # Copy application code
 COPY agentic-seek-front/ .
