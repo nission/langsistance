@@ -2,10 +2,7 @@
 
 import os, sys
 import uvicorn
-import aiofiles
 import configparser
-import asyncio
-import time
 from typing import List
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -17,12 +14,11 @@ import uuid
 from sources.agents.general_agent import GeneralAgent
 from sources.llm_provider import Provider
 from sources.interaction import Interaction
-from sources.agents import CasualAgent, CoderAgent, FileAgent, PlannerAgent, BrowserAgent
 from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
-from sources.knowledge.knowledge import get_embedding
+from sources.knowledge.knowledge import get_embedding, get_db_connection
 
 import redis
 import pymysql
@@ -250,17 +246,17 @@ def initialize_system():
     logger.info("Interaction initialized")
     return interaction
 
-def get_db_connection():
-    """创建并返回数据库连接"""
-    db_config = {
-        'host': os.getenv('MYSQL_HOST', 'localhost'),
-        'port' : int(os.getenv('MYSQL_PORT', 3306)),
-        'user': os.getenv('MYSQL_USER', 'root'),
-        'password': os.getenv('MYSQL_PASSWORD', ''),
-        'database': os.getenv('MYSQL_DATABASE', 'langsistance_db'),
-        'charset': 'utf8mb4'
-    }
-    return pymysql.connect(**db_config)
+# def get_db_connection():
+#     """创建并返回数据库连接"""
+#     db_config = {
+#         'host': os.getenv('MYSQL_HOST', 'localhost'),
+#         'port' : int(os.getenv('MYSQL_PORT', 3306)),
+#         'user': os.getenv('MYSQL_USER', 'root'),
+#         'password': os.getenv('MYSQL_PASSWORD', ''),
+#         'database': os.getenv('MYSQL_DATABASE', 'langsistance_db'),
+#         'charset': 'utf8mb4'
+#     }
+#     return pymysql.connect(**db_config)
 
 interaction = initialize_system()
 is_generating = False
@@ -458,8 +454,8 @@ async def create_knowledge_record(request: KnowledgeCreateRequest):
             # 插入数据
             sql = """
                   INSERT INTO knowledge
-                  (user_id, question, description, answer, public, embeddingId, model_name, tool_id, params, status)
-                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %d) \
+                  (user_id, question, description, answer, public, embedding_id, model_name, tool_id, params, status)
+                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) \
                   """
             cursor.execute(sql, (
                 request.userId,
@@ -810,9 +806,6 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
 
     if not userId or len(userId) > 50:
         errors.append("userId is required and must be no more than 50 characters")
-
-    if not query:
-        errors.append("query is required")
 
     if limit <= 0 or limit > 100:
         errors.append("limit must be between 1 and 100")

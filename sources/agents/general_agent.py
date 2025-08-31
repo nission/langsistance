@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Coroutine
+from typing import Dict, Any
 
 from sources.knowledge.knowledge import get_user_knowledge
 from sources.utility import pretty_print, animate_thinking
@@ -10,7 +10,6 @@ from sources.logger import Logger
 from mcp_use.client import MCPClient
 from mcp_use.adapters import LangChainAdapter
 
-import pymysql
 import os
 
 class GeneralAgent(Agent):

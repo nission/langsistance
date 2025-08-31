@@ -2,7 +2,7 @@ import os
 import sys
 # import torch
 import random
-from typing import List, Tuple, Type, Dict
+from typing import List
 
 # from transformers import pipeline
 from adaptive_classifier import AdaptiveClassifier
@@ -13,7 +13,7 @@ from sources.agents.casual_agent import CasualAgent
 from sources.agents.planner_agent import FileAgent
 from sources.agents.browser_agent import BrowserAgent
 from sources.language import LanguageUtility
-from sources.utility import pretty_print, animate_thinking, timer_decorator
+from sources.utility import pretty_print, animate_thinking
 from sources.logger import Logger
 from sources.knowledge.knowledge import get_embedding, search_knowledge_base
 
