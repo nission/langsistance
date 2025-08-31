@@ -31,7 +31,7 @@ const KnowledgeBase = () => {
     setError(null);
     try {
       // 这里使用一个默认的userId，实际应用中应该从认证系统获取
-      const userId = 'default_user';
+      const userId = '11111111';
       const response = await axios.get(`${BACKEND_URL}/knowledge`, {
         params: {
           userId,
@@ -71,7 +71,7 @@ const KnowledgeBase = () => {
     
     try {
       // 这里使用一个默认的userId，实际应用中应该从认证系统获取
-      const userId = 'default_user';
+      const userId = '11111111';
       const requestData = {
         ...formData,
         userId,
@@ -115,7 +115,7 @@ const KnowledgeBase = () => {
     
     try {
       // 这里使用一个默认的userId，实际应用中应该从认证系统获取
-      const userId = 'default_user';
+      const userId = '11111111';
       const requestData = {
         ...formData,
         userId,
