@@ -66,6 +66,13 @@ def get_user_knowledge_base(user_id: str):
         user_vector_indices[user_id] = {"embeddings": [], "items": []}
     return user_knowledge_bases[user_id]
 
+def get_user_vector_indices(user_id: str, embeddings_list: List, knowledge_items: List[Dict]):
+    user_vector_indices[user_id] = {
+        "embeddings": np.array(embeddings_list) if embeddings_list else np.array([]),
+        "items": knowledge_items
+    }
+    return user_vector_indices
+
 
 def update_vector_index(user_id: str):
     """更新用户的向量索引"""
@@ -83,7 +90,7 @@ def update_vector_index(user_id: str):
     }
 
 
-def search_knowledge_base(user_id: str, query_embedding: List[float], top_k: int = 3, threshold: float = 0.7):
+def search_knowledge_base(user_id: str, query_embedding: List[float], top_k: int = 3, threshold: float = 0.9):
     """在用户知识库中搜索最相关的内容"""
     if user_id not in user_vector_indices or len(user_vector_indices[user_id]["embeddings"]) == 0:
         return []

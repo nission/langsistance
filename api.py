@@ -18,7 +18,7 @@ from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
-from sources.knowledge.knowledge import get_embedding, get_db_connection
+from sources.knowledge.knowledge import get_embedding, get_db_connection, search_knowledge_base, get_user_vector_indices
 
 import redis
 import pymysql
@@ -404,7 +404,7 @@ async def process_query(request: QueryRequest):
         logger.info("Processing finished")
         if config.getboolean('MAIN', 'save_session'):
             interaction.save_session()
-@api.post("/knowledge", response_model=KnowledgeCreateResponse)
+@api.post("/create_knowledge", response_model=KnowledgeCreateResponse)
 async def create_knowledge_record(request: KnowledgeCreateRequest):
     """
     创建知识记录接口
@@ -512,7 +512,7 @@ async def create_knowledge_record(request: KnowledgeCreateRequest):
         if connection:
             connection.close()
 
-@api.post("/knowledge", response_model=KnowledgeDeleteResponse)
+@api.post("/delete_knowledge", response_model=KnowledgeDeleteResponse)
 async def delete_knowledge_record(request: KnowledgeDeleteRequest):
     """
     删除知识记录接口
@@ -614,7 +614,7 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest):
             connection.close()
 
 
-@api.post("/knowledge", response_model=KnowledgeUpdateResponse)
+@api.post("/update_knowledge", response_model=KnowledgeUpdateResponse)
 async def update_knowledge_record(request: KnowledgeUpdateRequest):
     """
     修改知识记录接口
@@ -794,7 +794,7 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest):
             connection.close()
 
 
-@api.get("/knowledge", response_model=KnowledgeQueryResponse)
+@api.get("/query_knowledge", response_model=KnowledgeQueryResponse)
 async def query_knowledge_records(userId: str, query: str, limit: int = 10, offset: int = 0):
     """
     查询知识记录接口
@@ -835,17 +835,23 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
             # 1. 用户ID匹配
             # 2. 公开的知识 或者 用户自己的知识
             # 3. question、description、answer字段模糊匹配
-            search_pattern = f"%{query}%"
+            if query:
+                search_pattern = f"%{query}%"
+                where_condition = "AND (question LIKE %s OR description LIKE %s OR answer LIKE %s)"
+                params = [1, False, userId, search_pattern, search_pattern, search_pattern]
+            else:
+                where_condition = ""
+                params = [1, False, userId]
 
-            count_sql = """
+            count_sql = f"""
                         SELECT COUNT(*) as total \
                         FROM knowledge
                         WHERE status = %s
-                          AND (public = %s OR userId = %s)
-                          AND (question LIKE %s OR description LIKE %s OR answer LIKE %s) \
+                          AND (public = %s OR user_id = %s)
+                          {where_condition} \
                         """
 
-            cursor.execute(count_sql, (1, False, userId, search_pattern, search_pattern, search_pattern))
+            cursor.execute(count_sql, params)
             count_result = cursor.fetchone()
             total = count_result['total'] if count_result else 0
 
@@ -862,26 +868,41 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
                 )
 
             # 查询数据
-            query_sql = """
-                        SELECT id, \
-                               user_id, \
-                               question, \
-                               description, \
-                               answer, public, model_name, tool_id, params, create_time, update_time
-                        FROM knowledge
-                        WHERE status = %s
-                          AND (public = %s \
-                           OR user_id = %s)
-                          AND (question LIKE %s \
-                           OR description LIKE %s \
-                           OR answer LIKE %s)
-                        ORDER BY update_time DESC
-                            LIMIT %s \
-                        OFFSET %s \
-                        """
+            if query:
+                query_sql = f"""
+                            SELECT id, \
+                                   user_id, \
+                                   question, \
+                                   description, \
+                                   answer, public, model_name, tool_id, params, create_time, update_time
+                            FROM knowledge
+                            WHERE status = %s
+                              AND (public = %s \
+                               OR user_id = %s)
+                              {where_condition}
+                            ORDER BY update_time DESC
+                                LIMIT %s \
+                            OFFSET %s \
+                            """
+                params = [1, False, userId, search_pattern, search_pattern, search_pattern, limit, offset]
+            else:
+                query_sql = """
+                            SELECT id, \
+                                   user_id, \
+                                   question, \
+                                   description, \
+                                   answer, public, model_name, tool_id, params, create_time, update_time
+                            FROM knowledge
+                            WHERE status = %s
+                              AND (public = %s \
+                               OR user_id = %s)
+                            ORDER BY update_time DESC
+                                LIMIT %s \
+                            OFFSET %s \
+                            """
+                params = [1, False, userId, limit, offset]
 
-            cursor.execute(query_sql, (1, False, userId, search_pattern, search_pattern,
-                                       search_pattern, limit, offset))
+            cursor.execute(query_sql, params)
             results = cursor.fetchall()
 
             # 转换为KnowledgeItem对象列表
@@ -937,7 +958,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
             connection.close()
 
 
-@api.post("/tool_and_knowledge", response_model=ToolAndKnowledgeCreateResponse)
+@api.post("/create_tool_and_knowledge", response_model=ToolAndKnowledgeCreateResponse)
 async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest):
     """
     创建tool和knowledge记录接口
@@ -1116,6 +1137,672 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest):
     finally:
         if connection:
             connection.close()
+
+class ToolUpdateRequest(BaseModel):
+    userId: str
+    toolId: int
+    title: Optional[str] = None
+    description: Optional[str] = None
+    public: Optional[bool] = None
+
+class ToolUpdateResponse(BaseModel):
+    success: bool
+    message: str
+
+class ToolDeleteRequest(BaseModel):
+    userId: str
+    toolId: int
+
+class ToolDeleteResponse(BaseModel):
+    success: bool
+    message: str
+
+class ToolItem(BaseModel):
+    id: int
+    userId: str
+    title: str
+    description: str
+    url: str
+    push: int
+    public: bool
+    status: bool
+    timeout: int
+    params: str
+    create_time: Optional[str] = None
+    update_time: Optional[str] = None
+
+class ToolQueryResponse(BaseModel):
+    success: bool
+    message: str
+    data: List[ToolItem]
+    total: int
+
+@api.post("/update_tools/{tool_id}", response_model=ToolUpdateResponse)
+async def update_tool(tool_id: int, request: ToolUpdateRequest):
+    """
+    更新工具接口（仅允许更新title、description和public字段）
+    """
+    logger.info(f"Updating tool {tool_id} for user: {request.userId}")
+
+    # 参数校验
+    errors = []
+
+    if not request.userId or len(request.userId) > 50:
+        errors.append("userId is required and must be no more than 50 characters")
+
+    if request.title is not None and (not request.title or len(request.title) > 100):
+        errors.append("title must be between 1 and 100 characters")
+
+    if request.description is not None and (not request.description or len(request.description) > 5000):
+        errors.append("description must be between 1 and 5000 characters")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 首先检查记录是否存在以及用户ID是否匹配
+            check_sql = "SELECT userId FROM tools WHERE id = %s AND status = %s"
+            cursor.execute(check_sql, (tool_id, 1))
+            result = cursor.fetchone()
+
+            if not result:
+                logger.warning(f"Tool record {tool_id} not found or inactive")
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "message": "Tool record not found or inactive"
+                    }
+                )
+
+            # 校验用户ID是否匹配
+            record_user_id = result[0]
+            if record_user_id != request.userId:
+                logger.warning(f"User {request.userId} not authorized to update tool record {tool_id}")
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "success": False,
+                        "message": "Not authorized to update this tool record"
+                    }
+                )
+
+            # 构建更新语句（仅包含允许更新的字段）
+            update_fields = []
+            update_params = []
+
+            if request.title is not None:
+                update_fields.append("title = %s")
+                update_params.append(request.title)
+
+            if request.description is not None:
+                update_fields.append("description = %s")
+                update_params.append(request.description)
+
+            if request.public is not None:
+                update_fields.append("public = %s")
+                update_params.append(request.public)
+
+            # 如果没有任何字段需要更新
+            if not update_fields:
+                logger.info(f"No fields to update for tool record {tool_id}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "No fields to update"
+                    }
+                )
+
+            # 添加工具ID到参数列表
+            update_params.append(tool_id)
+
+            # 更新数据库记录
+            update_sql = f"UPDATE tools SET {', '.join(update_fields)} WHERE id = %s"
+            cursor.execute(update_sql, update_params)
+            connection.commit()
+
+            logger.info(f"Tool record {tool_id} updated successfully")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Tool record updated successfully"
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error updating tool record: {str(e)}")
+        if connection:
+            connection.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
+@api.post("/delete_tool/{tool_id}", response_model=ToolDeleteResponse)
+async def delete_tool(tool_id: int, request: ToolDeleteRequest):
+    """
+    删除工具接口（通过修改status字段实现软删除）
+    """
+    logger.info(f"Deleting tool {tool_id} for user: {request.userId}")
+
+    # 参数校验
+    errors = []
+
+    if not request.userId or len(request.userId) > 50:
+        errors.append("userId is required and must be no more than 50 characters")
+
+    if not request.toolId:
+        errors.append("toolId is required")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 首先检查记录是否存在以及用户ID是否匹配
+            check_sql = "SELECT userId FROM tools WHERE id = %s"
+            cursor.execute(check_sql, (request.toolId,))
+            result = cursor.fetchone()
+
+            if not result:
+                logger.warning(f"Tool record {request.toolId} not found")
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "message": "Tool record not found"
+                    }
+                )
+
+            # 校验用户ID是否匹配
+            record_user_id = result[0]
+            if record_user_id != request.userId:
+                logger.warning(f"User {request.userId} not authorized to delete tool record {request.toolId}")
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "success": False,
+                        "message": "Not authorized to delete this tool record"
+                    }
+                )
+
+            # 软删除数据库记录（将status设置为0表示删除）
+            delete_sql = "UPDATE tools SET status = %s WHERE id = %s"
+            cursor.execute(delete_sql, (2, request.toolId))
+            connection.commit()
+
+            logger.info(f"Tool record {request.toolId} deleted successfully (status set to 0)")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Tool record deleted successfully"
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error deleting tool record: {str(e)}")
+        if connection:
+            connection.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
+@api.get("/query_tools", response_model=ToolQueryResponse)
+async def query_tool_records(userId: str, query: str = "", limit: int = 10, offset: int = 0):
+    """
+    查询工具记录接口
+    """
+    logger.info(f"Querying tool records for user: {userId}" + (f" with query: {query}" if query else ""))
+
+    # 参数校验
+    errors = []
+
+    if not userId or len(userId) > 50:
+        errors.append("userId is required and must be no more than 50 characters")
+
+    if limit <= 0 or limit > 100:
+        errors.append("limit must be between 1 and 100")
+
+    if offset < 0:
+        errors.append("offset must be greater than or equal to 0")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors,
+                "data": [],
+                "total": 0
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+            # 构建查询条件
+            # 1. 用户ID匹配
+            # 2. 公开的工具 或者 用户自己的工具
+            # 3. 如果query不为空，则进行title或description模糊匹配
+            if query:
+                search_pattern = f"%{query}%"
+                where_condition = "AND (title LIKE %s OR description LIKE %s)"
+                params = [1, False, userId, search_pattern, search_pattern]
+            else:
+                where_condition = ""
+                params = [1, False, userId]
+
+            count_sql = f"""
+                        SELECT COUNT(*) as total \
+                        FROM tools
+                        WHERE status = %s
+                          AND (public = %s OR userId = %s)
+                          {where_condition} \
+                        """
+
+            cursor.execute(count_sql, params)
+            count_result = cursor.fetchone()
+            total = count_result['total'] if count_result else 0
+
+            if total == 0:
+                logger.info(f"No tool records found for user: {userId}" + (f" with query: {query}" if query else ""))
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "No records found",
+                        "data": [],
+                        "total": 0
+                    }
+                )
+
+            # 查询数据
+            if query:
+                query_sql = f"""
+                            SELECT id, \
+                                   userId, \
+                                   title, \
+                                   description, \
+                                   url, push, public, status, timeout, params, create_time, update_time
+                            FROM tools
+                            WHERE status = %s
+                              AND (public = %s \
+                               OR userId = %s)
+                              {where_condition}
+                            ORDER BY update_time DESC
+                                LIMIT %s \
+                            OFFSET %s \
+                            """
+                params = [1, False, userId, search_pattern, search_pattern, limit, offset]
+            else:
+                query_sql = """
+                            SELECT id, \
+                                   userId, \
+                                   title, \
+                                   description, \
+                                   url, push, public, status, timeout, params, create_time, update_time
+                            FROM tools
+                            WHERE status = %s
+                              AND (public = %s \
+                               OR userId = %s)
+                            ORDER BY update_time DESC
+                                LIMIT %s \
+                            OFFSET %s \
+                            """
+                params = [1, False, userId, limit, offset]
+
+            cursor.execute(query_sql, params)
+            results = cursor.fetchall()
+
+            # 转换为ToolItem对象列表
+            tool_items = []
+            for row in results:
+                tool_item = ToolItem(
+                    id=row['id'],
+                    userId=row['userId'],
+                    title=row['title'],
+                    description=row['description'],
+                    url=row['url'],
+                    push=row['push'],
+                    public=row['public'],
+                    status=row['status'],
+                    timeout=row['timeout'],
+                    params=row['params']
+                )
+                # 处理时间字段
+                if row['create_time']:
+                    tool_item.create_time = row['create_time'].isoformat() if hasattr(row['create_time'],
+                                                                                     'isoformat') else str(
+                        row['create_time'])
+                if row['update_time']:
+                    tool_item.update_time = row['update_time'].isoformat() if hasattr(row['update_time'],
+                                                                                     'isoformat') else str(
+                        row['update_time'])
+
+                tool_items.append(tool_item)
+
+            logger.info(f"Found {len(tool_items)} tool records for user: {userId}" + (f" with query: {query}" if query else ""))
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Tool records retrieved successfully",
+                    "data": [item.dict() for item in tool_items],
+                    "total": total
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error querying tool records: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}",
+                "data": [],
+                "total": 0
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
+class QuestionRequest(BaseModel):
+    userId: str
+    question: str
+    top_k: Optional[int] = 3
+    similarity_threshold: Optional[float] = 0.7
+
+class KnowledgeToolResponse(BaseModel):
+    success: bool
+    message: str
+    knowledge: Optional[KnowledgeItem] = None
+    tool: Optional[ToolItem] = None
+    similarity: Optional[float] = None
+
+
+@api.post("/find_knowledge_tool")
+async def find_knowledge_tool(request: QuestionRequest):
+    """
+    根据用户问题查找最相关的知识及其对应的工具
+    """
+    logger.info(f"Finding knowledge tool for user: {request.userId} with question: {request.question}")
+
+    try:
+        # 参数校验
+        if not request.userId or len(request.userId) > 50:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "userId is required and must be no more than 50 characters"
+                }
+            )
+        user_id = request.userId
+
+        if not request.question:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "question is required"
+                }
+            )
+
+        # 1. 计算问题的embedding
+        query_embedding = get_embedding(request.question)
+        logger.info(f"Generated embedding for question: {request.question}")
+
+        # 2. 从MySQL查询该用户的所有有效知识记录
+        connection = None
+        try:
+            connection = get_db_connection()
+            with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+                # 查询用户有效的知识记录 (status=1表示有效)
+                # 包括用户自己的知识和公开的知识
+                query_sql = """
+                            SELECT id, \
+                                   user_id, \
+                                   question, \
+                                   description, \
+                                   answer, public, model_name, tool_id, params, create_time, update_time
+                            FROM knowledge
+                            WHERE status = %s
+                              AND (public = %s \
+                               OR user_id = %s)
+                            ORDER BY update_time DESC \
+                            """
+                cursor.execute(query_sql, (1, 1, request.userId))
+                knowledge_results = cursor.fetchall()
+
+                if not knowledge_results:
+                    logger.info(f"No knowledge records found for user: {request.userId}")
+                    return JSONResponse(
+                        status_code=200,
+                        content={
+                            "success": False,
+                            "message": "No knowledge records found for user"
+                        }
+                    )
+
+                logger.info(f"Found {len(knowledge_results)} knowledge records for user: {request.userId}")
+        finally:
+            if connection:
+                connection.close()
+
+        # 3. 从Redis查询所有知识记录的embedding
+        redis_conn = None
+        knowledge_embeddings = {}
+        try:
+            redis_conn = get_redis_connection()
+            for knowledge in knowledge_results:
+                knowledge_id = knowledge['id']
+                redis_key = f"knowledge_embedding_{knowledge_id}"
+                embedding_str = redis_conn.get(redis_key)
+
+                if embedding_str:
+                    # 将字符串转换回embedding列表
+                    embedding = eval(embedding_str)  # 注意：在生产环境中应使用更安全的方法如json.loads
+                    knowledge_embeddings[knowledge_id] = embedding
+                    logger.info(f"Retrieved embedding for knowledge ID: {knowledge_id}")
+                else:
+                    logger.warning(f"No embedding found in Redis for knowledge ID: {knowledge_id}")
+        except Exception as e:
+            logger.error(f"Error retrieving embeddings from Redis: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": f"Error retrieving embeddings from Redis: {str(e)}"
+                }
+            )
+
+        # 4. 构建用于相似度计算的数据结构
+        if not knowledge_embeddings:
+            logger.warning("No embeddings found for any knowledge records")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": False,
+                    "message": "No embeddings found for knowledge records"
+                }
+            )
+
+        # 构建向量索引数据结构
+        embeddings_list = []
+        knowledge_items = []
+
+        for knowledge in knowledge_results:
+            knowledge_id = knowledge['id']
+            if knowledge_id in knowledge_embeddings:
+                embeddings_list.append(knowledge_embeddings[knowledge_id])
+                knowledge_items.append(knowledge)
+
+        if not embeddings_list:
+            logger.warning("No valid embeddings available for similarity calculation")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": False,
+                    "message": "No valid embeddings available for similarity calculation"
+                }
+            )
+
+        # 构建临时的向量索引用于搜索
+        user_vector_indices = get_user_vector_indices(user_id, embeddings_list, knowledge_items)
+
+        # 5. 使用search_knowledge_base方法找出最接近的知识
+        search_results = search_knowledge_base(
+            "temp",  # 使用临时用户ID
+            query_embedding,
+            request.top_k,
+            request.similarity_threshold
+        )
+
+        # 清理临时向量索引
+        if user_id in user_vector_indices:
+            del user_vector_indices[user_id]
+
+        if not search_results:
+            logger.info("No matching knowledge found above similarity threshold")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": False,
+                    "message": "No matching knowledge found above similarity threshold"
+                }
+            )
+
+        # 获取最相似的知识记录
+        best_knowledge = search_results[0]
+
+        if not best_knowledge:
+            logger.error("Could not find matching knowledge record")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": "Error retrieving knowledge record details"
+                }
+            )
+
+        # 6. 根据知识记录中的tool_id查询对应的工具信息
+        tool_info = None
+        if best_knowledge['tool_id']:
+            connection = None
+            try:
+                connection = get_db_connection()
+                with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+                    # 查询工具信息
+                    tool_query_sql = """
+                                     SELECT id, \
+                                            userId, \
+                                            title, \
+                                            description, \
+                                            url, \
+                                            status, timeout, params
+                                     FROM tools
+                                     WHERE id = %s \
+                                       AND status = %s
+                                     """
+                    cursor.execute(tool_query_sql, (best_knowledge['tool_id'], 1))
+                    tool_result = cursor.fetchone()
+
+                    if tool_result:
+                        tool_info = ToolItem(
+                            id=tool_result['id'],
+                            userId=tool_result['userId'],
+                            title=tool_result['title'],
+                            description=tool_result['description'],
+                            url=tool_result['url'],
+                        )
+                        logger.info(f"Retrieved tool info for tool ID: {best_knowledge['tool_id']}")
+                    else:
+                        logger.warning(f"No tool found for tool ID: {best_knowledge['tool_id']}")
+            finally:
+                if connection:
+                    connection.close()
+
+        # 构建返回的知识记录对象
+        knowledge_item = KnowledgeItem(
+            id=best_knowledge['id'],
+            userId=best_knowledge['user_id'],
+            question=best_knowledge['question'],
+            description=best_knowledge['description'],
+            answer=best_knowledge['answer'],
+            public=best_knowledge['public'],
+            model_name=best_knowledge['model_name'] or "",
+            tool_id=best_knowledge['tool_id'] or 0,
+            params=best_knowledge['params'] or ""
+        )
+
+        response_data = {
+            "success": True,
+            "message": "Knowledge and tool found successfully",
+            "knowledge": knowledge_item,
+        }
+
+        if tool_info:
+            response_data["tool"] = tool_info
+
+        logger.info(f"Successfully found knowledge and tool for user: {request.userId}")
+        return JSONResponse(
+            status_code=200,
+            content=response_data
+        )
+
+    except Exception as e:
+        logger.error(f"Error in find_knowledge_tool: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
 
 if __name__ == "__main__":
     # Print startup info
