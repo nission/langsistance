@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uuid
+import json
 
 from sources.agents.general_agent import GeneralAgent
 from sources.llm_provider import Provider
@@ -1563,6 +1564,24 @@ class KnowledgeToolResponse(BaseModel):
     tool: Optional[ToolItem] = None
     similarity: Optional[float] = None
 
+class ToolFetchRequest(BaseModel):
+    query_id: str
+    user_id: str
+
+class ToolFetchResponse(BaseModel):
+    success: bool
+    message: str
+    tool: Optional[dict] = None
+
+class ToolResponseRequest(BaseModel):
+    query_id: str
+    user_id: str
+    tool_response: dict
+
+class ToolResponseResponse(BaseModel):
+    success: bool
+    message: str
+
 
 @api.post("/find_knowledge_tool")
 async def find_knowledge_tool(request: QuestionRequest):
@@ -1796,6 +1815,315 @@ async def find_knowledge_tool(request: QuestionRequest):
 
     except Exception as e:
         logger.error(f"Error in find_knowledge_tool: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+
+@api.post("/fetch_query_tool", response_model=ToolFetchResponse)
+async def fetch_tool(request: ToolFetchRequest):
+    """
+    根据query_id和user_id从Redis获取工具对象
+
+    Args:
+        request: 包含query_id和user_id的请求对象
+
+    Returns:
+        ToolFetchResponse: 包含工具对象的响应
+    """
+    logger.info(f"Fetching tool for user: {request.user_id} with query_id: {request.query_id}")
+
+    try:
+        # 参数校验
+        if not request.user_id or len(request.user_id) > 50:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "user_id is required and must be no more than 50 characters"
+                }
+            )
+
+        if not request.query_id:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "query_id is required"
+                }
+            )
+
+        # 创建Redis连接
+        redis_conn = None
+        try:
+            redis_conn = get_redis_connection()
+        except Exception as e:
+            logger.error(f"Failed to connect to Redis: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": f"Failed to connect to Redis: {str(e)}"
+                }
+            )
+
+        # 构造Redis键
+        redis_key = f"tool_{request.user_id}_{request.query_id}"
+
+        # 从Redis获取工具对象
+        try:
+            tool_data_str = redis_conn.get(redis_key)
+            if not tool_data_str:
+                logger.warning(f"No tool found in Redis with key: {redis_key}")
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "message": "Tool not found"
+                    }
+                )
+
+            # 尝试解析存储的工具数据
+            import json
+            tool_data = json.loads(tool_data_str)
+            logger.info(f"Successfully retrieved tool from Redis with key: {redis_key}")
+
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Tool retrieved successfully",
+                    "tool": tool_data
+                }
+            )
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse tool data from Redis: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": "Failed to parse tool data"
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error retrieving tool from Redis: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": f"Error retrieving tool from Redis: {str(e)}"
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error in fetch_tool: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )@api.post("/save_tool_response", response_model=ToolResponseResponse)
+async def save_tool_response(request: ToolResponseRequest):
+    """
+    保存工具响应到Redis
+
+    Args:
+        request: 包含query_id、user_id和tool_response的请求对象
+
+    Returns:
+        ToolResponseResponse: 操作结果响应
+    """
+    logger.info(f"Saving tool response for user: {request.user_id} with query_id: {request.query_id}")
+
+    try:
+        # 参数校验
+        if not request.user_id or len(request.user_id) > 50:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "user_id is required and must be no more than 50 characters"
+                }
+            )
+
+        if not request.query_id:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "query_id is required"
+                }
+            )
+
+        if not request.tool_response:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "tool_response is required"
+                }
+            )
+
+        # 创建Redis连接
+        redis_conn = None
+        try:
+            redis_conn = get_redis_connection()
+        except Exception as e:
+            logger.error(f"Failed to connect to Redis: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": f"Failed to connect to Redis: {str(e)}"
+                }
+            )
+
+        # 构造Redis键
+        redis_key = f"tool_response_{request.user_id}_{request.query_id}"
+
+        # 将tool_response数据存储到Redis
+        try:
+            import json
+            tool_response_str = json.dumps(request.tool_response)
+            redis_conn.set(redis_key, tool_response_str)
+            logger.info(f"Successfully saved tool response to Redis with key: {redis_key}")
+
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Tool response saved successfully"
+                }
+            )
+
+        except json.JSONEncodeError as e:
+            logger.error(f"Failed to serialize tool response data: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": "Failed to serialize tool response data"
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error saving tool response to Redis: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": f"Error saving tool response to Redis: {str(e)}"
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error in save_tool_response: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+
+@api.post("/save_tool_response", response_model=ToolResponseResponse)
+async def save_tool_response(request: ToolResponseRequest):
+    """
+    保存工具响应到Redis
+
+    Args:
+        request: 包含query_id、user_id和tool_response的请求对象
+
+    Returns:
+        ToolResponseResponse: 操作结果响应
+    """
+    logger.info(f"Saving tool response for user: {request.user_id} with query_id: {request.query_id}")
+
+    try:
+        # 参数校验
+        if not request.user_id or len(request.user_id) > 50:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "user_id is required and must be no more than 50 characters"
+                }
+            )
+
+        if not request.query_id:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "query_id is required"
+                }
+            )
+
+        if not request.tool_response:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "tool_response is required"
+                }
+            )
+
+        # 创建Redis连接
+        redis_conn = None
+        try:
+            redis_conn = get_redis_connection()
+        except Exception as e:
+            logger.error(f"Failed to connect to Redis: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": f"Failed to connect to Redis: {str(e)}"
+                }
+            )
+
+        # 构造Redis键
+        redis_key = f"tool_response_{request.user_id}_{request.query_id}"
+
+        # 将tool_response数据存储到Redis
+        try:
+            tool_response_str = json.dumps(request.tool_response)
+            redis_conn.set(redis_key, tool_response_str)
+            logger.info(f"Successfully saved tool response to Redis with key: {redis_key}")
+
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Tool response saved successfully"
+                }
+            )
+
+        except json.JSONEncodeError as e:
+            logger.error(f"Failed to serialize tool response data: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": "Failed to serialize tool response data"
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error saving tool response to Redis: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": f"Error saving tool response to Redis: {str(e)}"
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error in save_tool_response: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
