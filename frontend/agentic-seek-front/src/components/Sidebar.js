@@ -11,9 +11,9 @@ import {
   Typography,
   IconButton
 } from '@mui/material';
-import { 
-  Chat as ChatIcon, 
-  Book as KnowledgeIcon, 
+import {
+  Chat as ChatIcon,
+  Book as KnowledgeIcon,
   Settings as SettingsIcon,
   Close as CloseIcon
 } from '@mui/icons-material';

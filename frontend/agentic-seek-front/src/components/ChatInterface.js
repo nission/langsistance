@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   Card,
@@ -25,8 +25,7 @@ import {
 } from '@mui/icons-material';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import './ChatInterface.css';
-
-const ChatInterface = ({
+const ChatInterface = memo(({
   messages,
   query,
   setQuery,
@@ -492,6 +491,8 @@ const ChatInterface = ({
       </Box>
     </Box>
   );
-};
+});
+
+ChatInterface.displayName = 'ChatInterface';
 
 export default ChatInterface;

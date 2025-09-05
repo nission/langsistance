@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import { useTheme, useMediaQuery } from "@mui/material";
 import { usePerformance } from "../contexts/PerformanceContext";
-import { optimizeAnimation } from "../utils/animationOptimizer";
 import "./ResizableLayout.css";
 
 export const ResizableLayout = ({ children, initialLeftWidth = 50 }) => {
@@ -77,19 +76,19 @@ export const ResizableLayout = ({ children, initialLeftWidth = 50 }) => {
     <div
       ref={containerRef}
       className={`resizable-container ${isDragging ? "dragging" : ""}`}
-      style={optimizeAnimation({
+      style={{
         flexDirection: isMobile ? "column" : "row",
         height: isMobile ? "auto" : "100%",
         transition: shouldUseAnimation ? `all ${0.3 * animationComplexity}s ease` : "none"
-      })}
+      }}
     >
       <div
         className="resizable-left"
-        style={optimizeAnimation({
+        style={{
           width: isMobile ? "100%" : `${leftWidth}%`,
           height: isMobile ? "50%" : "100%",
           transition: shouldUseAnimation ? `width ${0.3 * animationComplexity}s ease, height ${0.3 * animationComplexity}s ease` : "none"
-        })}
+        }}
       >
         {children[0]}
       </div>
@@ -97,25 +96,25 @@ export const ResizableLayout = ({ children, initialLeftWidth = 50 }) => {
         <div
           className="resize-handle"
           onMouseDown={handleMouseDown}
-          style={optimizeAnimation({
+          style={{
             transition: shouldUseAnimation ? `background-color ${0.3 * animationComplexity}s ease` : "none"
-          })}
+          }}
         >
           <div
             className="resize-handle-line"
-            style={optimizeAnimation({
+            style={{
               transition: shouldUseAnimation ? `all ${0.3 * animationComplexity}s ease` : "none"
-            })}
+            }}
           />
         </div>
       )}
       <div
         className="resizable-right"
-        style={optimizeAnimation({
+        style={{
           width: isMobile ? "100%" : `${100 - leftWidth}%`,
           height: isMobile ? "50%" : "100%",
           transition: shouldUseAnimation ? `width ${0.3 * animationComplexity}s ease, height ${0.3 * animationComplexity}s ease` : "none"
-        })}
+        }}
       >
         {children[1]}
       </div>

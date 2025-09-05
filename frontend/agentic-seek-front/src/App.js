@@ -10,6 +10,8 @@ import Sidebar from "./components/Sidebar";
 import BottomNavigation from "./components/BottomNavigation";
 import ChatInterface from "./components/ChatInterface";
 import KnowledgeBase from "./components/KnowledgeBase";
+import ComputerView from "./components/ComputerView";
+import { ResizableLayout } from "./components/ResizableLayout";
 import { Settings } from "./components/Settings";
 
 // Import MUI components for Material Design 3
@@ -34,6 +36,7 @@ function App() {
   const [activeTab, setActiveTab] = useState("chat");
   const [prevTab, setPrevTab] = useState("chat");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentView, setCurrentView] = useState("blocks");
   const messagesEndRef = useRef(null);
 
   const fetchLatestAnswer = useCallback(async () => {
@@ -41,14 +44,30 @@ function App() {
       const res = await axios.get(`${BACKEND_URL}/latest_answer`);
       const data = res.data;
 
-      updateData(data);
+      // 只有当数据真正变化时才更新状态
       if (!data.answer || data.answer.trim() === "") {
+        // 只更新非消息相关的数据
+        setResponseData((prev) => {
+          if (prev?.blocks !== data.blocks || prev?.done !== data.done) {
+            return {
+              ...prev,
+              blocks: data.blocks || prev?.blocks || null,
+              done: data.done,
+              agent_name: data.agent_name,
+              status: data.status,
+              uid: data.uid,
+            };
+          }
+          return prev;
+        });
         return;
       }
+      
       const normalizedNewAnswer = normalizeAnswer(data.answer);
       const answerExists = messages.some(
         (msg) => normalizeAnswer(msg.content) === normalizedNewAnswer
       );
+      
       if (!answerExists) {
         setMessages((prev) => [
           ...prev,
@@ -63,6 +82,17 @@ function App() {
         ]);
         setStatus(data.status);
         scrollToBottom();
+        
+        // 更新其他数据
+        setResponseData((prev) => ({
+          ...prev,
+          blocks: data.blocks || prev?.blocks || null,
+          done: data.done,
+          answer: data.answer,
+          agent_name: data.agent_name,
+          status: data.status,
+          uid: data.uid,
+        }));
       } else {
         console.log("Duplicate answer detected, skipping:", data.answer);
       }
@@ -75,6 +105,7 @@ function App() {
     const intervalId = setInterval(() => {
       checkHealth();
       fetchLatestAnswer();
+      fetchScreenshot();
     }, 3000);
     return () => clearInterval(intervalId);
   }, [fetchLatestAnswer]);
@@ -90,7 +121,53 @@ function App() {
     }
   };
 
-  // 移除了Computer View相关的函数
+  const fetchScreenshot = useCallback(async () => {
+    try {
+      const timestamp = new Date().getTime();
+      const res = await axios.get(
+        `${BACKEND_URL}/screenshots/updated_screen.png?timestamp=${timestamp}`,
+        {
+          responseType: "blob",
+        }
+      );
+      console.log("Screenshot fetched successfully");
+      const imageUrl = URL.createObjectURL(res.data);
+      
+      setResponseData((prev) => {
+        // 只有当截图真正变化时才更新
+        if (prev?.screenshot && prev.screenshot !== "placeholder.png") {
+          URL.revokeObjectURL(prev.screenshot);
+        }
+        
+        // 检查是否需要更新
+        const newTimestamp = new Date().getTime();
+        if (prev?.screenshotTimestamp && (newTimestamp - prev.screenshotTimestamp) < 2000) {
+          // 如果距离上次更新不到2秒，跳过更新以减少跳动
+          URL.revokeObjectURL(imageUrl);
+          return prev;
+        }
+        
+        return {
+          ...prev,
+          screenshot: imageUrl,
+          screenshotTimestamp: newTimestamp,
+        };
+      });
+    } catch (err) {
+      console.error("Error fetching screenshot:", err);
+      setResponseData((prev) => {
+        // 只有当当前不是占位符时才更新为占位符
+        if (prev?.screenshot !== "placeholder.png") {
+          return {
+            ...prev,
+            screenshot: "placeholder.png",
+            screenshotTimestamp: new Date().getTime(),
+          };
+        }
+        return prev;
+      });
+    }
+  }, []);
 
   const normalizeAnswer = (answer) => {
     return answer
@@ -121,17 +198,32 @@ function App() {
     setPrevTab(activeTab);
   }, [activeTab]);
 
-  const updateData = (data) => {
-    setResponseData((prev) => ({
-      ...prev,
-      blocks: data.blocks || prev.blocks || null,
-      done: data.done,
-      answer: data.answer,
-      agent_name: data.agent_name,
-      status: data.status,
-      uid: data.uid,
-    }));
-  };
+  const updateData = useCallback((data) => {
+    setResponseData((prev) => {
+      // 检查数据是否真正发生变化
+      const hasChanges =
+        prev?.blocks !== data.blocks ||
+        prev?.done !== data.done ||
+        prev?.answer !== data.answer ||
+        prev?.agent_name !== data.agent_name ||
+        prev?.status !== data.status ||
+        prev?.uid !== data.uid;
+      
+      if (!hasChanges) {
+        return prev; // 没有变化时返回原对象，避免重新渲染
+      }
+      
+      return {
+        ...prev,
+        blocks: data.blocks || prev?.blocks || null,
+        done: data.done,
+        answer: data.answer,
+        agent_name: data.agent_name,
+        status: data.status,
+        uid: data.uid,
+      };
+    });
+  }, []);
 
   const handleStop = async (e) => {
     e.preventDefault();
@@ -178,6 +270,14 @@ function App() {
     } finally {
       console.log("Query completed");
       setIsLoading(false);
+    }
+  };
+
+  const handleGetScreenshot = async () => {
+    try {
+      setCurrentView("screenshot");
+    } catch (err) {
+      setError("Browser not in use");
     }
   };
 
@@ -372,36 +472,33 @@ function App() {
           }}>
             {activeTab === "settings" ? (
               <Settings />
-            ) : (
-              <Slide
-                direction={prevTab === "chat" && activeTab === "knowledge" ? "left" :
-                        prevTab === "knowledge" && activeTab === "chat" ? "right" : "left"}
-                in={activeTab === "chat" || activeTab === "knowledge"}
-                timeout={shouldUseAnimation ? 200 * animationComplexity : 0} // 根据性能设置调整动画持续时间
-                mountOnEnter
-                unmountOnExit
-              >
-                <Box sx={{ height: '100%' }}>
-                  {activeTab === "chat" ? (
-                    <ChatInterface
-                      messages={messages}
-                      query={query}
-                      setQuery={setQuery}
-                      isLoading={isLoading}
-                      isOnline={isOnline}
-                      status={status}
-                      expandedReasoning={expandedReasoning}
-                      toggleReasoning={toggleReasoning}
-                      handleSubmit={handleSubmit}
-                      handleStop={handleStop}
-                      messagesEndRef={messagesEndRef}
-                    />
-                  ) : (
-                    <KnowledgeBase />
-                  )}
-                </Box>
-              </Slide>
-            )}
+            ) : activeTab === "knowledge" ? (
+              <KnowledgeBase />
+            ) : activeTab === "chat" ? (
+              <ResizableLayout initialLeftWidth={50}>
+                <ChatInterface
+                  messages={messages}
+                  query={query}
+                  setQuery={setQuery}
+                  isLoading={isLoading}
+                  isOnline={isOnline}
+                  status={status}
+                  expandedReasoning={expandedReasoning}
+                  toggleReasoning={toggleReasoning}
+                  handleSubmit={handleSubmit}
+                  handleStop={handleStop}
+                  messagesEndRef={messagesEndRef}
+                />
+                <ComputerView
+                  currentView={currentView}
+                  setCurrentView={setCurrentView}
+                  responseData={responseData}
+                  error={error}
+                  handleGetScreenshot={handleGetScreenshot}
+                  onError={setError}
+                />
+              </ResizableLayout>
+            ) : null}
           </Box>
         </Box>
         
