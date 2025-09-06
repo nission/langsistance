@@ -1,7 +1,7 @@
 from typing import Dict, Any
 import json
 
-from sources.knowledge.knowledge import get_user_knowledge, get_knowledge_tool
+from sources.knowledge.knowledge import get_redis_connection, get_knowledge_tool
 from sources.utility import pretty_print, animate_thinking
 from sources.agents.agent import Agent
 from sources.tools.mcpFinder import MCP_finder
@@ -14,6 +14,7 @@ from mcp_use.client import MCPClient
 from mcp_use.adapters import LangChainAdapter
 
 import os
+import time
 
 class GeneralAgent(Agent):
 
@@ -139,9 +140,40 @@ class GeneralAgent(Agent):
                         tool_params = {}
 
                     # 动态创建工具函数
-                    def dynamic_tool_function(**kwargs):
-                        # 这里应该实现实际的工具逻辑
-                        # 目前只是返回一个示例响应
+                    def dynamic_tool_function(query_id, user_id, **params):
+                        try:
+                            # 连接Redis
+                            redis_conn = get_redis_connection()
+
+                            # 构造Redis键
+                            redis_key = f"tool_request_{query_id}_{user_id}"
+
+                            # 将参数转换为JSON并存储到Redis
+                            params_json = json.dumps(params)
+                            redis_conn.set(redis_key, params_json)
+
+                            # 轮询读取tool_response_{query_id}
+                            response_key = f"tool_response_{query_id}_{user_id}"
+                            timeout = 300  # 5分钟超时
+                            interval = 1  # 每秒查询一次
+                            elapsed = 0
+
+                            while elapsed < timeout:
+                                response_value = redis_conn.get(response_key)
+                                if response_value is not None:
+                                    # 成功获取到响应值
+                                    return response_value
+                                # 等待1秒后再次尝试
+                                time.sleep(interval)
+                                elapsed += interval
+
+                            # 超时未获取到响应值
+                            return None
+                        except Exception as e:
+                            # 如果Redis操作失败，记录日志但仍继续执行工具
+                            self.logger.error(f"Failed to write to Redis: {str(e)}")
+                            return None
+
                         return f"执行了工具: {tool_info.title}，参数为: {kwargs}"
 
                     # 使用工具信息动态注册工具

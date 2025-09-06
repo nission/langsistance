@@ -19,9 +19,8 @@ from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
-from sources.knowledge.knowledge import get_embedding, get_db_connection, get_knowledge_tool, KnowledgeItem, ToolItem
+from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection, get_knowledge_tool, KnowledgeItem, ToolItem
 
-import redis
 import pymysql
 from pydantic import BaseModel
 from typing import Optional
@@ -138,31 +137,6 @@ class ToolAndKnowledgeCreateResponse(BaseModel):
     message: str
     tool_id: Optional[int] = None
     knowledge_id: Optional[int] = None
-
-def get_redis_connection():
-    """创建并返回 Redis 连接"""
-    # 优先从环境变量获取 Redis 配置
-    redis_url = os.getenv('REDIS_BASE_URL')
-    if redis_url:
-        # 解析 Redis URL
-        from urllib.parse import urlparse
-        parsed = urlparse(redis_url)
-        redis_host = parsed.hostname or 'localhost'
-        redis_port = parsed.port or 6379
-        redis_db = int(parsed.path.lstrip('/')) if parsed.path else 0
-        redis_password = parsed.password
-    else:
-        # 回退到原来的配置方式
-        redis_host = os.getenv('REDIS_HOST', 'localhost')
-        redis_port = int(os.getenv('REDIS_PORT', 6379))
-        redis_db = int(os.getenv('REDIS_DB', 0))
-        redis_password = os.getenv('REDIS_PASSWORD', None)
-
-    if redis_password:
-        return redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password,
-                           decode_responses=True)
-    else:
-        return redis.Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
 
 
 
@@ -1658,8 +1632,8 @@ async def find_knowledge_tool(request: QuestionRequest):
             }
         )
 
-@api.post("/fetch_query_tool", response_model=ToolFetchResponse)
-async def fetch_tool(request: ToolFetchRequest):
+@api.post("/get_tool_request", response_model=ToolFetchResponse)
+async def get_tool_request(request: ToolFetchRequest):
     """
     根据query_id和user_id从Redis获取工具对象
 
@@ -1669,7 +1643,7 @@ async def fetch_tool(request: ToolFetchRequest):
     Returns:
         ToolFetchResponse: 包含工具对象的响应
     """
-    logger.info(f"Fetching tool for user: {request.user_id} with query_id: {request.query_id}")
+    logger.info(f"get tool request for user: {request.user_id} with query_id: {request.query_id}")
 
     try:
         # 参数校验
@@ -1706,7 +1680,7 @@ async def fetch_tool(request: ToolFetchRequest):
             )
 
         # 构造Redis键
-        redis_key = f"tool_{request.user_id}_{request.query_id}"
+        redis_key = f"tool_request_{request.query_id}_{request.user_id}"
 
         # 从Redis获取工具对象
         try:
@@ -1722,7 +1696,6 @@ async def fetch_tool(request: ToolFetchRequest):
                 )
 
             # 尝试解析存储的工具数据
-            import json
             tool_data = json.loads(tool_data_str)
             logger.info(f"Successfully retrieved tool from Redis with key: {redis_key}")
 
@@ -1821,110 +1794,7 @@ async def save_tool_response(request: ToolResponseRequest):
             )
 
         # 构造Redis键
-        redis_key = f"tool_response_{request.user_id}_{request.query_id}"
-
-        # 将tool_response数据存储到Redis
-        try:
-            import json
-            tool_response_str = json.dumps(request.tool_response)
-            redis_conn.set(redis_key, tool_response_str)
-            logger.info(f"Successfully saved tool response to Redis with key: {redis_key}")
-
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "success": True,
-                    "message": "Tool response saved successfully"
-                }
-            )
-
-        except json.JSONEncodeError as e:
-            logger.error(f"Failed to serialize tool response data: {str(e)}")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "message": "Failed to serialize tool response data"
-                }
-            )
-        except Exception as e:
-            logger.error(f"Error saving tool response to Redis: {str(e)}")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "message": f"Error saving tool response to Redis: {str(e)}"
-                }
-            )
-
-    except Exception as e:
-        logger.error(f"Error in save_tool_response: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "message": f"Internal server error: {str(e)}"
-            }
-        )
-
-@api.post("/save_tool_response", response_model=ToolResponseResponse)
-async def save_tool_response(request: ToolResponseRequest):
-    """
-    保存工具响应到Redis
-
-    Args:
-        request: 包含query_id、user_id和tool_response的请求对象
-
-    Returns:
-        ToolResponseResponse: 操作结果响应
-    """
-    logger.info(f"Saving tool response for user: {request.user_id} with query_id: {request.query_id}")
-
-    try:
-        # 参数校验
-        if not request.user_id or len(request.user_id) > 50:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "message": "user_id is required and must be no more than 50 characters"
-                }
-            )
-
-        if not request.query_id:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "message": "query_id is required"
-                }
-            )
-
-        if not request.tool_response:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "message": "tool_response is required"
-                }
-            )
-
-        # 创建Redis连接
-        redis_conn = None
-        try:
-            redis_conn = get_redis_connection()
-        except Exception as e:
-            logger.error(f"Failed to connect to Redis: {str(e)}")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "message": f"Failed to connect to Redis: {str(e)}"
-                }
-            )
-
-        # 构造Redis键
-        redis_key = f"tool_response_{request.user_id}_{request.query_id}"
+        redis_key = f"tool_response_{request.query_id}_{request.user_id}"
 
         # 将tool_response数据存储到Redis
         try:
