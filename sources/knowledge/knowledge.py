@@ -3,7 +3,7 @@ import json
 import uuid
 from openai import OpenAI
 import numpy as np
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from pydantic import BaseModel
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -26,12 +26,6 @@ user_vector_indices: Dict[str, Dict] = {}
 
 logger = Logger("knowledge.log")
 
-class KnowledgeItem(BaseModel):
-    user_id: str
-    question: str
-    answer: str
-    params: Optional[Dict] = None
-
 
 class UserQuestion(BaseModel):
     user_id: str
@@ -44,6 +38,32 @@ class KnowledgeBaseResponse(BaseModel):
     success: bool
     message: str
     item_id: Optional[str] = None
+
+
+
+class KnowledgeItem(BaseModel):
+    id: int
+    user_id: str
+    question: str
+    description: Optional[str] = None
+    answer: str
+    public: Optional[bool]
+    model_name: Optional[str]
+    tool_id: Optional[int]
+    params: Optional[str] = None
+    create_time: Optional[str] = None
+    update_time: Optional[str] = None
+
+
+class ToolItem(BaseModel):
+    id: int
+    user_id: str
+    title: str
+    description: str
+    url: Optional[str]
+    status: Optional[bool]
+    timeout: Optional[int]
+    params: Optional[str] = None
 
 
 def get_embedding(text: str) -> List[float]:
@@ -146,42 +166,6 @@ def generate_answer_with_context(question: str, context: List[Dict]) -> str:
         return response.choices[0].message.content
     except Exception as e:
         return f"生成答案时出错: {str(e)}"
-
-
-async def add_knowledge_item(item: KnowledgeItem):
-    """向用户知识库添加问答对"""
-    try:
-        # 获取或创建用户知识库
-        knowledge_base = get_user_knowledge_base(item.user_id)
-
-        # 生成嵌入向量
-        embedding = get_embedding(item.question)
-
-        # 创建知识项
-        knowledge_item = {
-            "id": str(uuid.uuid4()),
-            "question": item.question,
-            "answer": item.answer,
-            "embedding": embedding,
-            "params": item.params or {}
-        }
-
-        # 添加到知识库
-        knowledge_base.append(knowledge_item)
-
-        # 更新向量索引
-        update_vector_index(item.user_id)
-
-        return KnowledgeBaseResponse(
-            success=True,
-            message="知识项添加成功",
-            item_id=knowledge_item["id"]
-        )
-    except Exception as e:
-        return KnowledgeBaseResponse(
-            success=False,
-            message=f"添加知识项失败: {str(e)}"
-        )
 
 
 async def query_knowledge_base(query: UserQuestion):
@@ -335,3 +319,154 @@ def get_user_knowledge(user_id: str) -> List[Dict]:
     except Exception as e:
         pretty_print(f"Error querying user knowledge: {str(e)}", color="error")
         return []
+
+
+
+def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_threshold: float = 0.7) -> Tuple[
+    Optional[KnowledgeItem], Optional[ToolItem]]:
+    """
+    根据用户问题查找最相关的知识及其对应的工具
+
+    Args:
+        user_id: 用户ID
+        question: 用户问题
+        top_k: 返回最相关的几个结果
+        similarity_threshold: 相似度阈值
+
+    Returns:
+        Tuple[KnowledgeToolItem, ToolItem, float]: 知识项、工具项和相似度
+    """
+    try:
+        # 1. 计算问题的embedding
+        query_embedding = get_embedding(question)
+        logger.info(f"Generated embedding for question: {question}")
+
+        # 2. 从MySQL查询该用户的所有有效知识记录
+        knowledge_results = get_user_knowledge(user_id)
+
+        if not knowledge_results:
+            logger.info(f"No knowledge records found for user: {user_id}")
+            return None, None, None
+
+        logger.info(f"Found {len(knowledge_results)} knowledge records for user: {user_id}")
+
+        # 3. 从Redis查询所有知识记录的embedding
+        from sources.utility import get_redis_connection
+        redis_conn = get_redis_connection()
+        knowledge_embeddings = {}
+
+        for knowledge in knowledge_results:
+            knowledge_id = knowledge['id']
+            redis_key = f"knowledge_embedding_{knowledge_id}"
+            embedding_str = redis_conn.get(redis_key)
+
+            if embedding_str:
+                # 将字符串转换回embedding列表
+                embedding = eval(embedding_str)  # 注意：在生产环境中应使用更安全的方法如json.loads
+                knowledge_embeddings[knowledge_id] = embedding
+                logger.info(f"Retrieved embedding for knowledge ID: {knowledge_id}")
+            else:
+                logger.warning(f"No embedding found in Redis for knowledge ID: {knowledge_id}")
+
+        # 4. 构建用于相似度计算的数据结构
+        if not knowledge_embeddings:
+            logger.warning("No embeddings found for any knowledge records")
+            return None, None, None
+
+        # 构建向量索引数据结构
+        embeddings_list = []
+        knowledge_items = []
+
+        for knowledge in knowledge_results:
+            knowledge_id = knowledge['id']
+            if knowledge_id in knowledge_embeddings:
+                embeddings_list.append(knowledge_embeddings[knowledge_id])
+                knowledge_items.append(knowledge)
+
+        if not embeddings_list:
+            logger.warning("No valid embeddings available for similarity calculation")
+            return None, None, None
+
+        # 构建临时的向量索引用于搜索
+        temp_user_vector_indices = get_user_vector_indices("temp", embeddings_list, knowledge_items)
+
+        # 5. 使用search_knowledge_base方法找出最接近的知识
+        search_results = search_knowledge_base(
+            "temp",  # 使用临时用户ID
+            query_embedding,
+            top_k,
+            similarity_threshold
+        )
+
+        # 清理临时向量索引
+        if "temp" in temp_user_vector_indices:
+            del temp_user_vector_indices["temp"]
+
+        if not search_results:
+            logger.info("No matching knowledge found above similarity threshold")
+            return None, None, None
+
+        # 获取最相似的知识记录
+        best_knowledge = search_results[0]
+
+        # 6. 根据知识记录中的tool_id查询对应的工具信息
+        tool_info = None
+        if best_knowledge.get('tool_id'):
+            try:
+                connection = get_db_connection()
+                try:
+                    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+                        # 查询工具信息
+                        tool_query_sql = """
+                                         SELECT id, \
+                                                userId, \
+                                                title, \
+                                                description, \
+                                                url, \
+                                                status, \
+                                                timeout, \
+                                                params
+                                         FROM tools
+                                         WHERE id = %s \
+                                           AND status = %s
+                                         """
+                        cursor.execute(tool_query_sql, (best_knowledge['tool_id'], 1))
+                        tool_result = cursor.fetchone()
+
+                        if tool_result:
+                            tool_info = ToolItem(
+                                id=tool_result['id'],
+                                user_id=tool_result['userId'],
+                                title=tool_result['title'],
+                                description=tool_result['description'],
+                                url=tool_result['url'],
+                                status=tool_result['status'],
+                                timeout=tool_result['timeout'],
+                                params=tool_result['params']
+                            )
+                            logger.info(f"Retrieved tool info for tool ID: {best_knowledge['tool_id']}")
+                        else:
+                            logger.warning(f"No tool found for tool ID: {best_knowledge['tool_id']}")
+                finally:
+                    connection.close()
+            except Exception as e:
+                logger.error(f"Error retrieving tool info: {str(e)}")
+
+        # 构建返回的知识记录对象
+        knowledge_item = KnowledgeItem(
+            id=best_knowledge['id'],
+            user_id=best_knowledge['user_id'],
+            question=best_knowledge['question'],
+            description=best_knowledge['description'],
+            answer=best_knowledge['answer'],
+            public=best_knowledge['public'],
+            model_name=best_knowledge['model_name'] or "",
+            tool_id=best_knowledge['tool_id'] or 0,
+            params=best_knowledge['params'] or "",
+        )
+
+        return knowledge_item, tool_info
+
+    except Exception as e:
+        logger.error(f"Error in find_knowledge_tool: {str(e)}")
+        return None, None, None

@@ -41,6 +41,7 @@ class Interaction:
         if recover_last_session:
             self.load_last_session()
         self.emit_status()
+        self.last_success = None
     
     def get_spoken_language(self) -> str:
         """Get the primary TTS language."""

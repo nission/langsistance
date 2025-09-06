@@ -19,7 +19,7 @@ from sources.browser import Browser, create_driver
 from sources.utility import pretty_print
 from sources.logger import Logger
 from sources.schemas import QueryRequest, QueryResponse
-from sources.knowledge.knowledge import get_embedding, get_db_connection, search_knowledge_base, get_user_vector_indices
+from sources.knowledge.knowledge import get_embedding, get_db_connection, get_knowledge_tool, KnowledgeItem, ToolItem
 
 import redis
 import pymysql
@@ -106,19 +106,6 @@ class KnowledgeUpdateRequest(BaseModel):
 class KnowledgeUpdateResponse(BaseModel):
     success: bool
     message: str
-
-class KnowledgeItem(BaseModel):
-    id: int
-    userId: str
-    question: str
-    description: str
-    answer: str
-    public: bool
-    model_name: str
-    tool_id: int
-    params: str
-    create_time: Optional[str] = None
-    update_time: Optional[str] = None
 
 class KnowledgeQueryResponse(BaseModel):
     success: bool
@@ -1171,20 +1158,6 @@ class ToolDeleteResponse(BaseModel):
     success: bool
     message: str
 
-class ToolItem(BaseModel):
-    id: int
-    userId: str
-    title: str
-    description: str
-    url: str
-    push: int
-    public: bool
-    status: bool
-    timeout: int
-    params: str
-    create_time: Optional[str] = None
-    update_time: Optional[str] = None
-
 class ToolQueryResponse(BaseModel):
     success: bool
     message: str
@@ -1613,7 +1586,6 @@ async def find_knowledge_tool(request: QuestionRequest):
                     "message": "userId is required and must be no more than 50 characters"
                 }
             )
-        user_id = request.userId
 
         if not request.question:
             return JSONResponse(
@@ -1624,121 +1596,15 @@ async def find_knowledge_tool(request: QuestionRequest):
                 }
             )
 
-        # 1. 计算问题的embedding
-        query_embedding = get_embedding(request.question)
-        logger.info(f"Generated embedding for question: {request.question}")
-
-        # 2. 从MySQL查询该用户的所有有效知识记录
-        connection = None
-        try:
-            connection = get_db_connection()
-            with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-                # 查询用户有效的知识记录 (status=1表示有效)
-                # 包括用户自己的知识和公开的知识
-                query_sql = """
-                            SELECT id, \
-                                   user_id, \
-                                   question, \
-                                   description, \
-                                   answer, public, model_name, tool_id, params, create_time, update_time
-                            FROM knowledge
-                            WHERE status = %s
-                              AND (public = %s \
-                               OR user_id = %s)
-                            ORDER BY update_time DESC \
-                            """
-                cursor.execute(query_sql, (1, 1, request.userId))
-                knowledge_results = cursor.fetchall()
-
-                if not knowledge_results:
-                    logger.info(f"No knowledge records found for user: {request.userId}")
-                    return JSONResponse(
-                        status_code=200,
-                        content={
-                            "success": False,
-                            "message": "No knowledge records found for user"
-                        }
-                    )
-
-                logger.info(f"Found {len(knowledge_results)} knowledge records for user: {request.userId}")
-        finally:
-            if connection:
-                connection.close()
-
-        # 3. 从Redis查询所有知识记录的embedding
-        redis_conn = None
-        knowledge_embeddings = {}
-        try:
-            redis_conn = get_redis_connection()
-            for knowledge in knowledge_results:
-                knowledge_id = knowledge['id']
-                redis_key = f"knowledge_embedding_{knowledge_id}"
-                embedding_str = redis_conn.get(redis_key)
-
-                if embedding_str:
-                    # 将字符串转换回embedding列表
-                    embedding = eval(embedding_str)  # 注意：在生产环境中应使用更安全的方法如json.loads
-                    knowledge_embeddings[knowledge_id] = embedding
-                    logger.info(f"Retrieved embedding for knowledge ID: {knowledge_id}")
-                else:
-                    logger.warning(f"No embedding found in Redis for knowledge ID: {knowledge_id}")
-        except Exception as e:
-            logger.error(f"Error retrieving embeddings from Redis: {str(e)}")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "message": f"Error retrieving embeddings from Redis: {str(e)}"
-                }
-            )
-
-        # 4. 构建用于相似度计算的数据结构
-        if not knowledge_embeddings:
-            logger.warning("No embeddings found for any knowledge records")
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "success": False,
-                    "message": "No embeddings found for knowledge records"
-                }
-            )
-
-        # 构建向量索引数据结构
-        embeddings_list = []
-        knowledge_items = []
-
-        for knowledge in knowledge_results:
-            knowledge_id = knowledge['id']
-            if knowledge_id in knowledge_embeddings:
-                embeddings_list.append(knowledge_embeddings[knowledge_id])
-                knowledge_items.append(knowledge)
-
-        if not embeddings_list:
-            logger.warning("No valid embeddings available for similarity calculation")
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "success": False,
-                    "message": "No valid embeddings available for similarity calculation"
-                }
-            )
-
-        # 构建临时的向量索引用于搜索
-        user_vector_indices = get_user_vector_indices(user_id, embeddings_list, knowledge_items)
-
-        # 5. 使用search_knowledge_base方法找出最接近的知识
-        search_results = search_knowledge_base(
-            "temp",  # 使用临时用户ID
-            query_embedding,
+        # 调用knowledge.py中的方法获取知识项和工具信息
+        knowledge_item, tool_info = get_knowledge_tool(
+            request.userId,
+            request.question,
             request.top_k,
             request.similarity_threshold
         )
 
-        # 清理临时向量索引
-        if user_id in user_vector_indices:
-            del user_vector_indices[user_id]
-
-        if not search_results:
+        if not knowledge_item:
             logger.info("No matching knowledge found above similarity threshold")
             return JSONResponse(
                 status_code=200,
@@ -1748,77 +1614,33 @@ async def find_knowledge_tool(request: QuestionRequest):
                 }
             )
 
-        # 获取最相似的知识记录
-        best_knowledge = search_results[0]
-
-        if not best_knowledge:
-            logger.error("Could not find matching knowledge record")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "message": "Error retrieving knowledge record details"
-                }
-            )
-
-        # 6. 根据知识记录中的tool_id查询对应的工具信息
-        tool_info = None
-        if best_knowledge['tool_id']:
-            connection = None
-            try:
-                connection = get_db_connection()
-                with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-                    # 查询工具信息
-                    tool_query_sql = """
-                                     SELECT id, \
-                                            userId, \
-                                            title, \
-                                            description, \
-                                            url, \
-                                            status, timeout, params
-                                     FROM tools
-                                     WHERE id = %s \
-                                       AND status = %s
-                                     """
-                    cursor.execute(tool_query_sql, (best_knowledge['tool_id'], 1))
-                    tool_result = cursor.fetchone()
-
-                    if tool_result:
-                        tool_info = ToolItem(
-                            id=tool_result['id'],
-                            userId=tool_result['userId'],
-                            title=tool_result['title'],
-                            description=tool_result['description'],
-                            url=tool_result['url'],
-                        )
-                        logger.info(f"Retrieved tool info for tool ID: {best_knowledge['tool_id']}")
-                    else:
-                        logger.warning(f"No tool found for tool ID: {best_knowledge['tool_id']}")
-            finally:
-                if connection:
-                    connection.close()
-
         # 构建返回的知识记录对象
-        knowledge_item = KnowledgeItem(
-            id=best_knowledge['id'],
-            userId=best_knowledge['user_id'],
-            question=best_knowledge['question'],
-            description=best_knowledge['description'],
-            answer=best_knowledge['answer'],
-            public=best_knowledge['public'],
-            model_name=best_knowledge['model_name'] or "",
-            tool_id=best_knowledge['tool_id'] or 0,
-            params=best_knowledge['params'] or ""
+        knowledge_response = KnowledgeItem(
+            # id=knowledge_item.id,
+            user_id=knowledge_item.user_id,
+            # question=knowledge_item.question,
+            # description=knowledge_item.description,
+            # answer=knowledge_item.answer,
+            # public=knowledge_item.public,
+            # model_name=knowledge_item.model_name,
+            # tool_id=knowledge_item.tool_id,
+            # params=knowledge_item.params
         )
 
         response_data = {
             "success": True,
             "message": "Knowledge and tool found successfully",
-            "knowledge": knowledge_item,
+            "knowledge": knowledge_response
         }
 
         if tool_info:
-            response_data["tool"] = tool_info
+            tool_response = ToolItem(
+                id=tool_info.id,
+                user_id=tool_info.user_id,
+                title=tool_info.title,
+                description=tool_info.description,
+            )
+            response_data["tool"] = tool_response
 
         logger.info(f"Successfully found knowledge and tool for user: {request.userId}")
         return JSONResponse(
@@ -1940,7 +1762,9 @@ async def fetch_tool(request: ToolFetchRequest):
                 "success": False,
                 "message": f"Internal server error: {str(e)}"
             }
-        )@api.post("/save_tool_response", response_model=ToolResponseResponse)
+        )
+
+@api.post("/save_tool_response", response_model=ToolResponseResponse)
 async def save_tool_response(request: ToolResponseRequest):
     """
     保存工具响应到Redis
