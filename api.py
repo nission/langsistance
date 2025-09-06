@@ -154,16 +154,29 @@ class ToolAndKnowledgeCreateResponse(BaseModel):
 
 def get_redis_connection():
     """创建并返回 Redis 连接"""
-    redis_host = os.getenv('REDIS_HOST', 'localhost')
-    redis_port = int(os.getenv('REDIS_PORT', 6379))
-    redis_db = int(os.getenv('REDIS_DB', 0))
-    redis_password = os.getenv('REDIS_PASSWORD', None)
+    # 优先从环境变量获取 Redis 配置
+    redis_url = os.getenv('REDIS_BASE_URL')
+    if redis_url:
+        # 解析 Redis URL
+        from urllib.parse import urlparse
+        parsed = urlparse(redis_url)
+        redis_host = parsed.hostname or 'localhost'
+        redis_port = parsed.port or 6379
+        redis_db = int(parsed.path.lstrip('/')) if parsed.path else 0
+        redis_password = parsed.password
+    else:
+        # 回退到原来的配置方式
+        redis_host = os.getenv('REDIS_HOST', 'localhost')
+        redis_port = int(os.getenv('REDIS_PORT', 6379))
+        redis_db = int(os.getenv('REDIS_DB', 0))
+        redis_password = os.getenv('REDIS_PASSWORD', None)
 
     if redis_password:
         return redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password,
                            decode_responses=True)
     else:
         return redis.Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
+
 
 
 def initialize_system():
