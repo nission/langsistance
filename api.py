@@ -290,10 +290,11 @@ async def get_latest_answer():
         return JSONResponse(status_code=200, content=query_resp_history[-1])
     return JSONResponse(status_code=404, content={"error": "No answer available"})
 
-async def think_wrapper(user_id, interaction, query):
+async def think_wrapper(user_id, interaction, query, query_id):
     try:
         success = False   #断点
         interaction.last_query = query
+        interaction.query_id = query_id
         logger.info("Agents request is being processed")
         success = await interaction.think(user_id)
         if not success:
@@ -334,7 +335,7 @@ async def process_query(request: QueryRequest):
     try:
         is_generating = True
         user_id = 11111111
-        success = await think_wrapper(user_id, interaction, request.query)
+        success = await think_wrapper(user_id, interaction, request.query, request.query_id)
         is_generating = False
 
         if not success:

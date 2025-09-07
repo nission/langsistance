@@ -87,7 +87,7 @@ class GeneralAgent(Agent):
             try:
                 params_data = json.loads(tool_info["params"])
                 if isinstance(params_data, dict):
-                    tool_params_info = "工具参数要求:\n"
+                    tool_params_info = "工具参数要求:user id - query id\n"
                     for param_name, param_info in params_data.items():
                         param_type = param_info.get("type", "unknown")
                         tool_params_info += f"  - {param_name} ({param_type})\n"
@@ -110,6 +110,16 @@ class GeneralAgent(Agent):
         """
         # return self.expand_prompt(system_prompt)
         return system_prompt
+
+    def generate_user_prompt(self, prompt, user_id, query_id) -> str:
+        user_prompt = f"""
+        {prompt},
+        user id is {user_id},
+        query id is {query_id},
+        """
+        self.logger.info(f"user prompt:{user_prompt}")
+
+        return user_prompt
 
     # async def get_tools(self) -> dict:
     #
@@ -213,12 +223,12 @@ class GeneralAgent(Agent):
         except Exception as e:
             raise Exception(f"get_tool failed: {str(e)}") from e
 
-    async def process(self,user_id, prompt, speech_module) -> str | tuple[str, str]:
+    async def process(self,user_id, prompt, query_id, speech_module) -> str | tuple[str, str]:
         if not self.enabled:
             return "general Agent is disabled."
         self.knowledgeTool = get_knowledge_tool(user_id,  prompt)
         # user_prompt = self.expand_prompt(prompt)
-        user_prompt = prompt
+        user_prompt = self.generate_user_prompt(prompt)
         system_prompt = self.generate_system_prompt()
         self.memory.push('user', user_prompt)
         self.memory.push('system', system_prompt)

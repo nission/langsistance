@@ -5,6 +5,7 @@ from sources.utility import pretty_print
 
 class QueryRequest(BaseModel):
     query: str
+    query_id: str
     tts_enabled: bool = True
 
     def __str__(self):

@@ -130,7 +130,7 @@ class Agent():
         self.status_message = "Stopped"
     
     @abstractmethod
-    def process(self, user_id, prompt, speech_module) -> str:
+    def process(self, user_id, prompt, query_id, speech_module) -> str:
         """
         abstract method, implementation in child class.
         Process the prompt and return the answer of the agent.

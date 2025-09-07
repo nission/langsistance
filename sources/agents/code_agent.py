@@ -43,7 +43,7 @@ class CoderAgent(Agent):
                f"\nYou must save file at root directory: {self.work_dir}"
         return f"{prompt}\n\n{info}"
 
-    async def process(self, user_id, prompt, speech_module) -> str:
+    async def process(self, user_id, prompt, query_id, speech_module) -> str:
         answer = ""
         attempt = 0
         max_attempts = 5

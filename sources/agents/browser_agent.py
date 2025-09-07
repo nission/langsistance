@@ -328,7 +328,7 @@ class BrowserAgent(Agent):
         """
         return prompt
     
-    async def process(self, user_id, user_prompt: str, speech_module: type) -> Tuple[str, str]:
+    async def process(self, user_id: str, user_prompt: str, query_id: str, speech_module: type) -> Tuple[str, str]:
         """
         Process the user prompt to conduct an autonomous web search.
         Start with a google search with searxng using web_search tool.
