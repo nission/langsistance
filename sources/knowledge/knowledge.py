@@ -9,6 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from sources.logger import Logger
 import pymysql
+import pymysql.cursors
 import redis
 
 from sources.utility import pretty_print
@@ -275,7 +276,8 @@ def get_db_connection():
         'user': os.getenv('MYSQL_USER', 'langsistance_user'),
         'password': os.getenv('MYSQL_PASSWORD', ''),
         'database': os.getenv('MYSQL_DATABASE', 'langsistance_db'),
-        'charset': 'utf8mb4'
+        'charset': 'utf8mb4',
+        'cursorclass': pymysql.cursors.DictCursor
     }
     return pymysql.connect(**db_config)
 
@@ -305,7 +307,7 @@ def get_redis_connection():
         return redis.Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
 
 
-def get_user_knowledge(user_id: str) -> List[Dict]:
+def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
     """
     根据用户ID从数据库查询有效的知识记录
 
@@ -313,14 +315,14 @@ def get_user_knowledge(user_id: str) -> List[Dict]:
         user_id (str): 用户ID
 
     Returns:
-        List[Dict]: 用户的知识记录列表
+        List[KnowledgeItem]: 用户的知识记录列表
     """
     # 这里需要实现数据库连接和查询逻辑
     # 参考api.py中的get_db_connection方法和查询逻辑
-    logger.info(f"get_user_knowledge:{user_id}")
+
     try:
         connection = get_db_connection()
-        logger.info(f"connection:{connection}")
+
         try:
             with connection.cursor() as cursor:
                 # 查询用户有效的知识记录 (status=1表示有效)
@@ -332,11 +334,29 @@ def get_user_knowledge(user_id: str) -> List[Dict]:
                                AND user_id = %s
                             ORDER BY update_time DESC
                             """
-                logger.info(f"query_sql:{query_sql}")
+
                 cursor.execute(query_sql, (1, user_id))
                 results = cursor.fetchall()
                 logger.info(f"results:{results}")
-                return results
+
+                # 将查询结果转换为KnowledgeItem对象列表
+                knowledge_items = []
+                for row in results:
+                    knowledge_item = KnowledgeItem(
+                        id=row['id'],
+                        user_id=row['user_id'],
+                        question=row['question'],
+                        description=row['description'] or "",
+                        answer=row['answer'],
+                        public=row['public'] or False,
+                        model_name=row['model_name'] or "",
+                        tool_id=row['tool_id'] or 0,
+                        params=row['params'] or "",
+                        create_time=row['create_time'].isoformat() if row['create_time'] else None,
+                        update_time=row['update_time'].isoformat() if row['update_time'] else None
+                    )
+                    knowledge_items.append(knowledge_item)
+                return knowledge_items
         finally:
             connection.close()
 
@@ -370,7 +390,7 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
 
         if not knowledge_results:
             logger.info(f"No knowledge records found for user: {user_id}")
-            return None, None, None
+            return None, None
 
         logger.info(f"Found {len(knowledge_results)} knowledge records for user: {user_id}")
 
@@ -379,7 +399,7 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
         knowledge_embeddings = {}
 
         for knowledge in knowledge_results:
-            knowledge_id = knowledge['id']
+            knowledge_id = knowledge.id
             redis_key = f"knowledge_embedding_{knowledge_id}"
             embedding_str = redis_conn.get(redis_key)
 
@@ -394,21 +414,21 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
         # 4. 构建用于相似度计算的数据结构
         if not knowledge_embeddings:
             logger.warning("No embeddings found for any knowledge records")
-            return None, None, None
+            return None, None
 
         # 构建向量索引数据结构
         embeddings_list = []
         knowledge_items = []
 
         for knowledge in knowledge_results:
-            knowledge_id = knowledge['id']
+            knowledge_id = knowledge.id
             if knowledge_id in knowledge_embeddings:
                 embeddings_list.append(knowledge_embeddings[knowledge_id])
                 knowledge_items.append(knowledge)
 
         if not embeddings_list:
             logger.warning("No valid embeddings available for similarity calculation")
-            return None, None, None
+            return None, None
 
         # 构建临时的向量索引用于搜索
         temp_user_vector_indices = get_user_vector_indices("temp", embeddings_list, knowledge_items)
@@ -427,7 +447,7 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
 
         if not search_results:
             logger.info("No matching knowledge found above similarity threshold")
-            return None, None, None
+            return None, None
 
         # 获取最相似的知识记录
         best_knowledge = search_results[0]
@@ -492,4 +512,4 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
 
     except Exception as e:
         logger.error(f"Error in find_knowledge_tool: {str(e)}")
-        return None, None, None
+        return None, None
