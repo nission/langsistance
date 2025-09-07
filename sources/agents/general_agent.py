@@ -75,27 +75,32 @@ class GeneralAgent(Agent):
         """
         knowledge_item, tool_info = self.knowledgeTool
         self.logger.info(f"knowledge item:{knowledge_item} - tool:{tool_info}")
-        tool_title = tool_info["title"]
+        if not tool_info:
+            system_prompt = f"""
+            你是一个MCP智能助手，你找不到合适的工具帮助用户完成任务。提醒用户去社区查找能解决问题的工具
+            """
+            return system_prompt
+
+        tool_title = tool_info.title
         tool_description = None
-        if tool_info["description"]:
-            tool_description = tool_info["description"]
+        if tool_info.description:
+            tool_description = tool_info.description
         else:
             tool_description = tool_title
 
         # 解析工具参数信息
         tool_params_info = ""
-        if tool_info["params"]:
+        if tool_info.params:
             try:
-                params_data = json.loads(tool_info["params"])
+                params_data = json.loads(tool_info.params)
                 if isinstance(params_data, dict):
                     tool_params_info = "工具参数要求:user id - query id\n"
-                    for param_name, param_info in params_data.items():
-                        param_type = param_info.get("type", "unknown")
+                    for param_name, param_type in params_data.items():
                         tool_params_info += f"  - {param_name} ({param_type})\n"
                 else:
-                    tool_params_info = f"工具参数: {tool_info['params']}"
+                    tool_params_info = f"工具参数: {tool_info.params}"
             except json.JSONDecodeError:
-                tool_params_info = f"工具参数: {tool_info['params']}"
+                tool_params_info = f"工具参数: {tool_info.params}"
 
         system_prompt = f"""
         你是一个MCP智能助手，你的任务是根据用户的问题和上下文，使用MCP服务器提供的工具来解决问题。

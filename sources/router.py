@@ -484,46 +484,7 @@ class AgentRouter:
         try:
             # 获取用户ID，这里假设使用默认用户ID，您可能需要根据实际情况修改
             user_id = "111111111"
-            
-            # 获取文本的嵌入向量
-            query_embedding = get_embedding(text)
-            
-            # 从知识库中检索最匹配的知识
-            search_results = search_knowledge_base(
-                user_id,
-                query_embedding,
-                top_k=1,  # 只获取最匹配的一条
-                threshold=0.5  # 设置相似度阈值
-            )
-            
-            if search_results:
-                # 获取最匹配的知识项
-                best_match = search_results[0]
-                pretty_print(f"Found matching knowledge: {best_match['question']}", color="success")
-                self.logger.info(f"Found matching knowledge: {best_match['question']}")
-                
-                self.agents[0].set_knowledge_tool(best_match)
-                # 将匹配到的知识内容追加到text中
-                modified_text = text
-                
-                # 追加问题
-                if 'question' in best_match:
-                    modified_text += f"\n\n相关问题: {best_match['question']}"
-                
-                # 追加答案
-                if 'answer' in best_match:
-                    modified_text += f"\n\n相关答案: {best_match['answer']}"
-                
-                # 追加工具信息
-                if 'params' in best_match and 'tools' in best_match['params']:
-                    tools_str = ", ".join(best_match['params']['tools']) if isinstance(best_match['params']['tools'], list) else str(best_match['params']['tools'])
-                    modified_text += f"\n\n可用工具: {tools_str}"
-                
-                pretty_print(f"Added knowledge context to query", color="success")
-                self.logger.info(f"Added knowledge context to query")
 
-                return self.agents[0], modified_text
-            
             # 如果没有找到匹配的知识，则使用默认的选择方法
             pretty_print("No matching knowledge found, using default agent selection.", color="warning")
             return self.agents[0], text

@@ -22,7 +22,7 @@ CREATE TABLE  knowledge (
 -- 创建工具表
 CREATE TABLE  tools (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    userId VARCHAR(50) NOT NULL,
+    user_id VARCHAR(50) NOT NULL,
     title VARCHAR(100) NOT NULL,
 	description VARCHAR(5000) NOT NULL,
 	url VARCHAR(1000) NOT NULL,

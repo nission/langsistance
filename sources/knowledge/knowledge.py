@@ -23,9 +23,6 @@ client = OpenAI(
 # 存储用户知识库 {user_id: [{"id": str, "question": str, "answer": str, "embedding": list, "params": dict}]}
 user_knowledge_bases: Dict[str, List[Dict]] = {}
 
-# 存储用户知识库的向量索引 {user_id: {"embeddings": list, "items": list}}
-user_vector_indices: Dict[str, Dict] = {}
-
 logger = Logger("knowledge.log")
 
 
@@ -80,39 +77,15 @@ def get_embedding(text: str) -> List[float]:
         logger.error(f"Error in get_embedding: {str(e)}")
         raise e
 
-
-def get_user_knowledge_base(user_id: str):
-    """获取用户的个人知识库，如果不存在则创建空的知识库"""
-    if user_id not in user_knowledge_bases:
-        user_knowledge_bases[user_id] = []
-        user_vector_indices[user_id] = {"embeddings": [], "items": []}
-    return user_knowledge_bases[user_id]
-
 def get_user_vector_indices(user_id: str, embeddings_list: List, knowledge_items: List[Dict]):
-    user_vector_indices[user_id] = {
+
+    user_vector_indices = {user_id: {
         "embeddings": np.array(embeddings_list) if embeddings_list else np.array([]),
         "items": knowledge_items
-    }
+    }}
     return user_vector_indices
 
-
-def update_vector_index(user_id: str):
-    """更新用户的向量索引"""
-    knowledge_base = user_knowledge_bases.get(user_id, [])
-    embeddings = []
-    items = []
-
-    for item in knowledge_base:
-        embeddings.append(item["embedding"])
-        items.append(item)
-
-    user_vector_indices[user_id] = {
-        "embeddings": np.array(embeddings) if embeddings else np.array([]),
-        "items": items
-    }
-
-
-def search_knowledge_base(user_id: str, query_embedding: List[float], top_k: int = 3, threshold: float = 0.9):
+def search_knowledge_base(user_id: str, query_embedding: List[float], user_vector_indices: Dict, top_k: int = 3, threshold: float = 0):
     """在用户知识库中搜索最相关的内容"""
     if user_id not in user_vector_indices or len(user_vector_indices[user_id]["embeddings"]) == 0:
         return []
@@ -122,15 +95,31 @@ def search_knowledge_base(user_id: str, query_embedding: List[float], top_k: int
         [query_embedding],
         user_vector_indices[user_id]["embeddings"]
     )[0]
-
+    logger.info(f"similarities: {similarities}")
     # 获取最相似的结果
     results = []
     for i, similarity in enumerate(similarities):
         if similarity >= threshold:
-            item = user_vector_indices[user_id]["items"][i].copy()
-            item["similarity"] = float(similarity)
-            results.append(item)
-
+            # 由于items中存储的是KnowledgeItem对象，我们需要创建一个新的字典来存储相似度
+            item = user_vector_indices[user_id]["items"][i]
+            # 创建一个包含KnowledgeItem字段和相似度的新字典
+            result_item = {
+                "id": item.id,
+                "user_id": item.user_id,
+                "question": item.question,
+                "description": item.description,
+                "answer": item.answer,
+                "public": item.public,
+                "model_name": item.model_name,
+                "tool_id": item.tool_id,
+                "params": item.params,
+                "create_time": item.create_time,
+                "update_time": item.update_time,
+                "similarity": float(similarity)
+            }
+            results.append(result_item)
+            logger.info(f"item:{result_item}")
+    logger.info(f"results: {results}")
     # 按相似度排序并返回前top_k个结果
     results.sort(key=lambda x: x["similarity"], reverse=True)
     return results[:top_k]
@@ -168,105 +157,6 @@ def generate_answer_with_context(question: str, context: List[Dict]) -> str:
         return response.choices[0].message.content
     except Exception as e:
         return f"生成答案时出错: {str(e)}"
-
-
-async def query_knowledge_base(query: UserQuestion):
-    """查询用户知识库并返回答案"""
-    try:
-        # 获取查询的嵌入向量
-        query_embedding = get_embedding(query.question)
-
-        # 搜索知识库
-        search_results = search_knowledge_base(
-            query.user_id,
-            query_embedding,
-            query.top_k,
-            query.similarity_threshold
-        )
-
-        # 生成答案
-        if search_results:
-            # 使用检索到的内容生成答案
-            # answer = generate_answer_with_context(query.question, search_results)
-
-            # return {
-            #     "answer": answer,
-            #     "sources": search_results,
-            #     "user_id": query.user_id
-            # }
-            return search_results[0]
-        else:
-            # 如果没有找到相关内容，直接使用 OpenAI 生成答案
-            try:
-                response = client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "你是一个有帮助的助手。"},
-                        {"role": "user", "content": query.question}
-                    ],
-                    max_tokens=300
-                )
-                answer = response.choices[0].message.content
-
-                return {
-                    "answer": f"{answer}\n\n(注意: 此回答未基于您的知识库，而是由AI直接生成)",
-                    "sources": [],
-                    "user_id": query.user_id
-                }
-            except Exception as e:
-                return {
-                    "answer": "抱歉，我无法回答这个问题，并且在您的知识库中也没有找到相关信息。",
-                    "sources": [],
-                    "user_id": query.user_id
-                }
-
-    except Exception as e:
-        logger.error(f"Error in query_knowledge_base: {str(e)}")
-        raise e
-
-
-async def list_user_knowledge(user_id: str):
-    """列出用户知识库中的所有问答对"""
-    try:
-        knowledge_base = get_user_knowledge_base(user_id)
-
-        # 只返回基本信息，不返回嵌入向量
-        items = [{
-            "id": item["id"],
-            "question": item["question"],
-            "answer": item["answer"],
-            "params": item["params"]
-        } for item in knowledge_base]
-
-        return {
-            "user_id": user_id,
-            "count": len(items),
-            "items": items
-        }
-    except Exception as e:
-        logger.error(f"Error in list_user_knowledge: {str(e)}")
-        raise e
-
-
-async def delete_knowledge_item(user_id: str, item_id: str):
-    """从用户知识库中删除指定的问答对"""
-    try:
-        knowledge_base = get_user_knowledge_base(user_id)
-
-        # 查找并删除项目
-        initial_count = len(knowledge_base)
-        user_knowledge_bases[user_id] = [item for item in knowledge_base if item["id"] != item_id]
-
-        if len(user_knowledge_bases[user_id]) == initial_count:
-            return {"success": False, "message": "未找到指定的知识项"}
-
-        # 更新向量索引
-        update_vector_index(user_id)
-
-        return {"success": True, "message": "知识项删除成功"}
-    except Exception as e:
-        logger.error(f"Error in delete_knowledge_item: {str(e)}")
-        raise e
 
 def get_db_connection():
     """创建并返回数据库连接"""
@@ -366,7 +256,7 @@ def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
 
 
 
-def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_threshold: float = 0.7) -> Tuple[
+def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_threshold: float = 0) -> Tuple[
     Optional[KnowledgeItem], Optional[ToolItem]]:
     """
     根据用户问题查找最相关的知识及其对应的工具
@@ -402,7 +292,7 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
             knowledge_id = knowledge.id
             redis_key = f"knowledge_embedding_{knowledge_id}"
             embedding_str = redis_conn.get(redis_key)
-
+            logger.info(f"embedding key is {redis_key} - embedding string is {embedding_str}")
             if embedding_str:
                 # 将字符串转换回embedding列表
                 embedding = eval(embedding_str)  # 注意：在生产环境中应使用更安全的方法如json.loads
@@ -431,19 +321,20 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
             return None, None
 
         # 构建临时的向量索引用于搜索
-        temp_user_vector_indices = get_user_vector_indices("temp", embeddings_list, knowledge_items)
-
+        temp_user_vector_indices = get_user_vector_indices(user_id, embeddings_list, knowledge_items)
+        logger.info(f"temp_user_vector_indices:{temp_user_vector_indices}")
         # 5. 使用search_knowledge_base方法找出最接近的知识
         search_results = search_knowledge_base(
-            "temp",  # 使用临时用户ID
+            user_id,  # 使用临时用户ID
             query_embedding,
+            temp_user_vector_indices,
             top_k,
             similarity_threshold
         )
-
+        logger.info(f"search_results:{search_results}")
         # 清理临时向量索引
-        if "temp" in temp_user_vector_indices:
-            del temp_user_vector_indices["temp"]
+        if user_id in temp_user_vector_indices:
+            del temp_user_vector_indices[user_id]
 
         if not search_results:
             logger.info("No matching knowledge found above similarity threshold")
@@ -454,7 +345,7 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
 
         # 6. 根据知识记录中的tool_id查询对应的工具信息
         tool_info = None
-        if best_knowledge.get('tool_id'):
+        if best_knowledge["tool_id"]:
             try:
                 connection = get_db_connection()
                 try:
@@ -462,7 +353,7 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
                         # 查询工具信息
                         tool_query_sql = """
                                          SELECT id, \
-                                                userId, \
+                                                user_id, \
                                                 title, \
                                                 description, \
                                                 url, \
@@ -479,7 +370,7 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
                         if tool_result:
                             tool_info = ToolItem(
                                 id=tool_result['id'],
-                                user_id=tool_result['userId'],
+                                user_id=str(tool_result['user_id']),
                                 title=tool_result['title'],
                                 description=tool_result['description'],
                                 url=tool_result['url'],

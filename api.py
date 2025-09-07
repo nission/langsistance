@@ -1064,18 +1064,18 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest):
 
             # 获取插入的 knowledge ID
             knowledge_id = cursor.lastrowid
-            logger.info(f"Knowledge record created successfully with ID: {knowledge_id}")
+
 
             # 计算并存储 embedding
             query_embedding = get_embedding(request.knowledge_question + request.knowledge_answer)
-
+            logger.info(f"create embedding: {query_embedding}")
             # 将 embedding 写入 Redis
             try:
                 redis_conn = get_redis_connection()
                 # 使用记录ID作为键，将embedding存储到Redis中
                 redis_key = f"knowledge_embedding_{knowledge_id}"
                 redis_conn.set(redis_key, str(query_embedding))
-                logger.info(f"Embedding stored in Redis with key: {redis_key}")
+                logger.info(f"Embedding stored in Redis with key: {redis_key} - query embedding{query_embedding}")
             except Exception as redis_error:
                 logger.error(f"Failed to store embedding in Redis: {str(redis_error)}")
                 # 注意：即使Redis存储失败，我们也不会中断主流程
@@ -1572,7 +1572,7 @@ async def find_knowledge_tool(request: QuestionRequest):
             request.userId,
             request.question,
             request.top_k,
-            request.similarity_threshold
+            0
         )
 
         if not knowledge_item:

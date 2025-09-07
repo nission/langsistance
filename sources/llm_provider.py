@@ -216,7 +216,7 @@ class Provider:
         """
         Use openai to generate text.
         """
-        self.logger.info(f"api key:{self.api_key}")
+        self.logger.info(f"tools:{tools}")
         self.logger.info(f"history:{history}")
         # client = OpenAI(api_key=self.api_key)
         llm = ChatOpenAI(
