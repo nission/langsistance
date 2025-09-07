@@ -806,7 +806,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
     try:
         # 获取数据库连接
         connection = get_db_connection()
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        with connection.cursor() as cursor:
             # 构建查询条件
             # 1. 用户ID匹配
             # 2. 公开的知识 或者 用户自己的知识
@@ -814,16 +814,16 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
             if query:
                 search_pattern = f"%{query}%"
                 where_condition = "AND (question LIKE %s OR description LIKE %s OR answer LIKE %s)"
-                params = [1, False, userId, search_pattern, search_pattern, search_pattern]
+                params = [1, userId, search_pattern, search_pattern, search_pattern]
             else:
                 where_condition = ""
-                params = [1, False, userId]
+                params = [1, userId]
 
             count_sql = f"""
                         SELECT COUNT(*) as total \
                         FROM knowledge
                         WHERE status = %s
-                          AND (public = %s OR user_id = %s)
+                          AND  user_id = %s
                           {where_condition} \
                         """
 
@@ -853,14 +853,13 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
                                    answer, public, model_name, tool_id, params, create_time, update_time
                             FROM knowledge
                             WHERE status = %s
-                              AND (public = %s \
-                               OR user_id = %s)
+                               AND user_id = %s
                               {where_condition}
                             ORDER BY update_time DESC
                                 LIMIT %s \
                             OFFSET %s \
                             """
-                params = [1, False, userId, search_pattern, search_pattern, search_pattern, limit, offset]
+                params = [1, userId, search_pattern, search_pattern, search_pattern, limit, offset]
             else:
                 query_sql = """
                             SELECT id, \
@@ -870,13 +869,12 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
                                    answer, public, model_name, tool_id, params, create_time, update_time
                             FROM knowledge
                             WHERE status = %s
-                              AND (public = %s \
-                               OR user_id = %s)
+                               AND user_id = %s
                             ORDER BY update_time DESC
                                 LIMIT %s \
                             OFFSET %s \
                             """
-                params = [1, False, userId, limit, offset]
+                params = [1, userId, limit, offset]
 
             cursor.execute(query_sql, params)
             results = cursor.fetchall()
@@ -989,7 +987,7 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest):
             # 插入 Tool 数据
             tool_sql = """
                        INSERT INTO tools
-                       (userId, title, description, url, push, public, status, timeout, params)
+                       (user_id, title, description, url, push, public, status, timeout, params)
                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) \
                        """
             cursor.execute(tool_sql, (
@@ -1175,7 +1173,7 @@ async def update_tool(tool_id: int, request: ToolUpdateRequest):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # 首先检查记录是否存在以及用户ID是否匹配
-            check_sql = "SELECT userId FROM tools WHERE id = %s AND status = %s"
+            check_sql = "SELECT user_id FROM tools WHERE id = %s AND status = %s"
             cursor.execute(check_sql, (tool_id, 1))
             result = cursor.fetchone()
 
@@ -1293,7 +1291,7 @@ async def delete_tool(tool_id: int, request: ToolDeleteRequest):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # 首先检查记录是否存在以及用户ID是否匹配
-            check_sql = "SELECT userId FROM tools WHERE id = %s"
+            check_sql = "SELECT user_id FROM tools WHERE id = %s"
             cursor.execute(check_sql, (request.toolId,))
             result = cursor.fetchone()
 
@@ -1384,7 +1382,7 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
     try:
         # 获取数据库连接
         connection = get_db_connection()
-        with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+        with connection.cursor() as cursor:
             # 构建查询条件
             # 1. 用户ID匹配
             # 2. 公开的工具 或者 用户自己的工具
@@ -1392,16 +1390,16 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
             if query:
                 search_pattern = f"%{query}%"
                 where_condition = "AND (title LIKE %s OR description LIKE %s)"
-                params = [1, False, userId, search_pattern, search_pattern]
+                params = [1, userId, search_pattern, search_pattern]
             else:
                 where_condition = ""
-                params = [1, False, userId]
+                params = [1, userId]
 
             count_sql = f"""
                         SELECT COUNT(*) as total \
                         FROM tools
                         WHERE status = %s
-                          AND (public = %s OR userId = %s)
+                          AND user_id = %s
                           {where_condition} \
                         """
 
@@ -1425,36 +1423,34 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
             if query:
                 query_sql = f"""
                             SELECT id, \
-                                   userId, \
+                                   user_id, \
                                    title, \
                                    description, \
                                    url, push, public, status, timeout, params, create_time, update_time
                             FROM tools
                             WHERE status = %s
-                              AND (public = %s \
-                               OR userId = %s)
+                               AND user_id = %s
                               {where_condition}
                             ORDER BY update_time DESC
                                 LIMIT %s \
                             OFFSET %s \
                             """
-                params = [1, False, userId, search_pattern, search_pattern, limit, offset]
+                params = [1, userId, search_pattern, search_pattern, limit, offset]
             else:
                 query_sql = """
                             SELECT id, \
-                                   userId, \
+                                   user_id, \
                                    title, \
                                    description, \
                                    url, push, public, status, timeout, params, create_time, update_time
                             FROM tools
                             WHERE status = %s
-                              AND (public = %s \
-                               OR userId = %s)
+                               AND user_id = %s
                             ORDER BY update_time DESC
                                 LIMIT %s \
                             OFFSET %s \
                             """
-                params = [1, False, userId, limit, offset]
+                params = [1, userId, limit, offset]
 
             cursor.execute(query_sql, params)
             results = cursor.fetchall()
@@ -1464,7 +1460,7 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
             for row in results:
                 tool_item = ToolItem(
                     id=row['id'],
-                    userId=row['userId'],
+                    userId=row['user_id'],
                     title=row['title'],
                     description=row['description'],
                     url=row['url'],

@@ -317,28 +317,25 @@ def get_user_knowledge(user_id: str) -> List[Dict]:
     """
     # 这里需要实现数据库连接和查询逻辑
     # 参考api.py中的get_db_connection方法和查询逻辑
-
+    logger.info(f"get_user_knowledge:{user_id}")
     try:
         connection = get_db_connection()
-
+        logger.info(f"connection:{connection}")
         try:
-            with connection.cursor as cursor:
+            with connection.cursor() as cursor:
                 # 查询用户有效的知识记录 (status=1表示有效)
                 # 包括用户自己的知识和公开的知识
                 query_sql = """
-                            SELECT id, \
-                                   user_id, \
-                                   question, \
-                                   description, \
-                                   answer, public, model_name, tool_id, params, create_time, update_time
+                            SELECT id, user_id, question, description, answer, public, model_name, tool_id, params, create_time, update_time
                             FROM knowledge
                             WHERE status = %s
-                               OR userId = %s)
-                            ORDER BY update_time DESC \
+                               AND user_id = %s
+                            ORDER BY update_time DESC
                             """
-
+                logger.info(f"query_sql:{query_sql}")
                 cursor.execute(query_sql, (1, user_id))
                 results = cursor.fetchall()
+                logger.info(f"results:{results}")
                 return results
         finally:
             connection.close()
@@ -378,7 +375,6 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
         logger.info(f"Found {len(knowledge_results)} knowledge records for user: {user_id}")
 
         # 3. 从Redis查询所有知识记录的embedding
-        from sources.utility import get_redis_connection
         redis_conn = get_redis_connection()
         knowledge_embeddings = {}
 
@@ -442,7 +438,7 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
             try:
                 connection = get_db_connection()
                 try:
-                    with connection.cursor(pymysql.cursors.DictCursor) as cursor:
+                    with connection.cursor() as cursor:
                         # 查询工具信息
                         tool_query_sql = """
                                          SELECT id, \

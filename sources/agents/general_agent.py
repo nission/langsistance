@@ -74,6 +74,7 @@ class GeneralAgent(Agent):
         生成系统提示
         """
         knowledge_item, tool_info = self.knowledgeTool
+        self.logger.info(f"knowledge item:{knowledge_item} - tool:{tool_info}")
         tool_title = tool_info["title"]
         tool_description = None
         if tool_info["description"]:
@@ -96,8 +97,6 @@ class GeneralAgent(Agent):
             except json.JSONDecodeError:
                 tool_params_info = f"工具参数: {tool_info['params']}"
 
-        tool_params = tool_info["params"]
-        self.logger.info(f"tool:{tool_info}")
         system_prompt = f"""
         你是一个MCP智能助手，你的任务是根据用户的问题和上下文，使用MCP服务器提供的工具来解决问题。
         你需要使用的MCP工具是：
@@ -228,7 +227,7 @@ class GeneralAgent(Agent):
             return "general Agent is disabled."
         self.knowledgeTool = get_knowledge_tool(user_id,  prompt)
         # user_prompt = self.expand_prompt(prompt)
-        user_prompt = self.generate_user_prompt(prompt)
+        user_prompt = self.generate_user_prompt(prompt, user_id, query_id)
         system_prompt = self.generate_system_prompt()
         self.memory.push('user', user_prompt)
         self.memory.push('system', system_prompt)
