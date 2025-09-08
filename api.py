@@ -98,8 +98,8 @@ class KnowledgeUpdateRequest(BaseModel):
     description: Optional[str] = None
     answer: Optional[str] = None
     public: Optional[bool] = None
-    model_name: Optional[str] = None
-    tool_id: Optional[int] = None
+    modelName: Optional[str] = None
+    toolId: Optional[int] = None
     params: Optional[str] = None
 
 class KnowledgeUpdateResponse(BaseModel):
@@ -615,14 +615,14 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest):
     if request.answer and len(request.answer) > 5000:
         errors.append("answer must be no more than 5000 characters")
 
-    if request.model_name and len(request.model_name) > 200:
-        errors.append("model_name must be no more than 200 characters")
+    if request.modelName and len(request.modelName) > 200:
+        errors.append("modelName must be no more than 200 characters")
 
     if request.params and len(request.params) > 5000:
         errors.append("params must be no more than 5000 characters")
 
-    if request.tool_id and not request.tool_id:
-        errors.append("tool_id must be a valid integer")
+    if request.toolId and not request.toolId:
+        errors.append("toolId must be a valid integer")
 
     if errors:
         logger.error(f"Validation errors: {errors}")
@@ -641,7 +641,7 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest):
         connection = get_db_connection()
         with connection.cursor() as cursor:
             # 首先检查记录是否存在以及用户ID是否匹配
-            check_sql = "SELECT userId, question, answer FROM knowledge WHERE id = %s AND status = %d"
+            check_sql = "SELECT user_id, question, answer FROM knowledge WHERE id = %s AND status = %s"
             cursor.execute(check_sql, (request.knowledgeId, 1))
             result = cursor.fetchone()
 
@@ -656,8 +656,8 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest):
                 )
 
             # 校验用户ID是否匹配
-            record_user_id = result[0]
-            if record_user_id != request.userId:
+            record_user_id = result["user_id"]
+            if str(record_user_id) != request.userId:
                 logger.warning(f"User {request.userId} not authorized to update knowledge record {request.knowledgeId}")
                 return JSONResponse(
                     status_code=403,
@@ -672,32 +672,25 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest):
             update_params = []
 
             if request.question is not None:
-                update_fields.append("question = %s")
-                update_params.append(request.question)
+                update_fields.append("question = '" + request.question + "'")
 
             if request.description is not None:
-                update_fields.append("description = %s")
-                update_params.append(request.description)
+                update_fields.append("description = '" + request.description + "'")
 
             if request.answer is not None:
-                update_fields.append("answer = %s")
-                update_params.append(request.answer)
+                update_fields.append("answer = '" + request.answer + "'")
 
             if request.public is not None:
-                update_fields.append("public = %s")
-                update_params.append(request.public)
+                update_fields.append("public = " + str(request.public))
 
-            if request.model_name is not None:
-                update_fields.append("model_name = %s")
-                update_params.append(request.model_name)
+            if request.modelName is not None:
+                update_fields.append("modelName = '" + request.modelName + "'")
 
-            if request.tool_id is not None:
-                update_fields.append("tool_id = %s")
-                update_params.append(request.tool_id)
+            if request.toolId is not None:
+                update_fields.append("tool_id = " + str(request.toolId))
 
             if request.params is not None:
-                update_fields.append("params = %s")
-                update_params.append(request.params)
+                update_fields.append("params = '" + request.params + "'")
 
             # 如果没有任何字段需要更新
             if not update_fields:
@@ -720,8 +713,8 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest):
 
             # 检查是否需要重新计算embedding (question或answer有变更)
             need_recalculate_embedding = False
-            original_question = result[1]
-            original_answer = result[2]
+            original_question = result["question"]
+            original_answer = result["answer"]
 
             if ((request.question is not None and request.question != original_question) or
                     (request.answer is not None and request.answer != original_answer)):
