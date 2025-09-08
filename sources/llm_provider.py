@@ -11,7 +11,8 @@ from dotenv import load_dotenv
 from ollama import Client as OllamaClient
 from openai import OpenAI
 from langchain_openai import ChatOpenAI
-from langchain.agents import create_openai_tools_agent
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.agents import create_openai_tools_agent,AgentExecutor
 from langchain.schema import SystemMessage, HumanMessage
 
 from sources.logger import Logger
@@ -224,8 +225,17 @@ class Provider:
             api_key=self.api_key,
             temperature=0
         )
-        agent = llm.bind_tools(tools)
+        # agent = llm.bind_tools(tools)
 
+        # 定义一个提示模板，通常包含系统消息、历史消息、用户输入和Agent的临时思考区域
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", history[1]["content"]),
+            ("human", "{input}"),
+            MessagesPlaceholder("agent_scratchpad"),  # 用于存放Agent思考过程和工具调用的位置
+        ])
+        agent = create_openai_tools_agent(llm, tools, prompt)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)  # verbose=True 打印详细日志
+        response = agent_executor.invoke({"input": history[0]["content"]})
         # messages = [
         #     SystemMessage(content=history["system"]),
         #     HumanMessage(content=history["user"])
@@ -238,7 +248,7 @@ class Provider:
             #     tools=tools,
             #     temperature=0
             # )
-            response = agent.invoke(history)
+            # response = agent.invoke(history)
             self.logger.info(f"response:{response}")
             if response is None:
                 raise Exception("OpenAI response is empty.")
