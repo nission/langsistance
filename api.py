@@ -536,8 +536,8 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest):
                 )
 
             # 校验用户ID是否匹配
-            record_user_id = result[0]
-            if record_user_id != request.userId:
+            record_user_id = result["user_id"]
+            if str(record_user_id) != request.userId:
                 logger.warning(f"User {request.userId} not authorized to delete knowledge record {request.knowledgeId}")
                 return JSONResponse(
                     status_code=403,
@@ -548,8 +548,8 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest):
                 )
 
             # 删除数据库记录
-            delete_sql = "UPDATE knowledge WHERE id = %s SET status = %d"
-            cursor.execute(delete_sql, (request.knowledgeId, 2))
+            delete_sql = "UPDATE knowledge SET status = %s WHERE id = %s"
+            cursor.execute(delete_sql, (2, request.knowledgeId))
             connection.commit()
 
             # 删除Redis中的embedding
