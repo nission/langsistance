@@ -1586,17 +1586,9 @@ async def find_knowledge_tool(request: QuestionRequest):
             )
 
         # 构建返回的知识记录对象
-        knowledge_response = KnowledgeItem(
-            # id=knowledge_item.id,
-            user_id=knowledge_item.user_id,
-            # question=knowledge_item.question,
-            # description=knowledge_item.description,
-            # answer=knowledge_item.answer,
-            # public=knowledge_item.public,
-            # model_name=knowledge_item.model_name,
-            # tool_id=knowledge_item.tool_id,
-            # params=knowledge_item.params
-        )
+        knowledge_response = {
+            "userId": knowledge_item.user_id
+        }
 
         response_data = {
             "success": True,
@@ -1605,12 +1597,12 @@ async def find_knowledge_tool(request: QuestionRequest):
         }
 
         if tool_info:
-            tool_response = ToolItem(
-                id=tool_info.id,
-                user_id=tool_info.user_id,
-                title=tool_info.title,
-                description=tool_info.description,
-            )
+            tool_response = {
+                "id": tool_info.id,
+                "title": tool_info.title,
+                "description": tool_info.description,
+                "url": tool_info.url
+            }
             response_data["tool"] = tool_response
 
         logger.info(f"Successfully found knowledge and tool for user: {request.userId}")
