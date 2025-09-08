@@ -1460,7 +1460,7 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
             for row in results:
                 tool_item = ToolItem(
                     id=row['id'],
-                    userId=row['user_id'],
+                    user_id=str(row['user_id']),
                     title=row['title'],
                     description=row['description'],
                     url=row['url'],
@@ -1470,16 +1470,6 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
                     timeout=row['timeout'],
                     params=row['params']
                 )
-                # 处理时间字段
-                if row['create_time']:
-                    tool_item.create_time = row['create_time'].isoformat() if hasattr(row['create_time'],
-                                                                                     'isoformat') else str(
-                        row['create_time'])
-                if row['update_time']:
-                    tool_item.update_time = row['update_time'].isoformat() if hasattr(row['update_time'],
-                                                                                     'isoformat') else str(
-                        row['update_time'])
-
                 tool_items.append(tool_item)
 
             logger.info(f"Found {len(tool_items)} tool records for user: {userId}" + (f" with query: {query}" if query else ""))
