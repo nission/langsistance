@@ -1523,7 +1523,7 @@ class KnowledgeToolResponse(BaseModel):
 
 class ToolFetchRequest(BaseModel):
     query_id: str
-    user_id: str
+    userId: str
 
 class ToolFetchResponse(BaseModel):
     success: bool
@@ -1532,7 +1532,7 @@ class ToolFetchResponse(BaseModel):
 
 class ToolResponseRequest(BaseModel):
     query_id: str
-    user_id: str
+    userId: str
     tool_response: dict
 
 class ToolResponseResponse(BaseModel):
@@ -1632,24 +1632,24 @@ async def find_knowledge_tool(request: QuestionRequest):
 @api.post("/get_tool_request", response_model=ToolFetchResponse)
 async def get_tool_request(request: ToolFetchRequest):
     """
-    根据query_id和user_id从Redis获取工具对象
+    根据query_id和userId从Redis获取工具对象
 
     Args:
-        request: 包含query_id和user_id的请求对象
+        request: 包含query_id和userId的请求对象
 
     Returns:
         ToolFetchResponse: 包含工具对象的响应
     """
-    logger.info(f"get tool request for user: {request.user_id} with query_id: {request.query_id}")
+    logger.info(f"get tool request for user: {request.userId} with query_id: {request.query_id}")
 
     try:
         # 参数校验
-        if not request.user_id or len(request.user_id) > 50:
+        if not request.userId or len(request.userId) > 50:
             return JSONResponse(
                 status_code=400,
                 content={
                     "success": False,
-                    "message": "user_id is required and must be no more than 50 characters"
+                    "message": "userId is required and must be no more than 50 characters"
                 }
             )
 
@@ -1677,7 +1677,7 @@ async def get_tool_request(request: ToolFetchRequest):
             )
 
         # 构造Redis键
-        redis_key = f"tool_request_{request.query_id}_{request.user_id}"
+        redis_key = f"tool_request_{request.query_id}_{request.userId}"
 
         # 从Redis获取工具对象
         try:
@@ -1740,21 +1740,21 @@ async def save_tool_response(request: ToolResponseRequest):
     保存工具响应到Redis
 
     Args:
-        request: 包含query_id、user_id和tool_response的请求对象
+        request: 包含query_id、userId和tool_response的请求对象
 
     Returns:
         ToolResponseResponse: 操作结果响应
     """
-    logger.info(f"Saving tool response for user: {request.user_id} with query_id: {request.query_id}")
+    logger.info(f"Saving tool response for user: {request.userId} with query_id: {request.query_id}")
 
     try:
         # 参数校验
-        if not request.user_id or len(request.user_id) > 50:
+        if not request.userId or len(request.userId) > 50:
             return JSONResponse(
                 status_code=400,
                 content={
                     "success": False,
-                    "message": "user_id is required and must be no more than 50 characters"
+                    "message": "userId is required and must be no more than 50 characters"
                 }
             )
 
@@ -1791,7 +1791,7 @@ async def save_tool_response(request: ToolResponseRequest):
             )
 
         # 构造Redis键
-        redis_key = f"tool_response_{request.query_id}_{request.user_id}"
+        redis_key = f"tool_response_{request.query_id}_{request.userId}"
 
         # 将tool_response数据存储到Redis
         try:
