@@ -1258,12 +1258,12 @@ async def update_tool(tool_id: int, request: ToolUpdateRequest):
         if connection:
             connection.close()
 
-@api.post("/delete_tool/{tool_id}", response_model=ToolDeleteResponse)
-async def delete_tool(tool_id: int, request: ToolDeleteRequest):
+@api.post("/delete_tool", response_model=ToolDeleteResponse)
+async def delete_tool(request: ToolDeleteRequest):
     """
     删除工具接口（通过修改status字段实现软删除）
     """
-    logger.info(f"Deleting tool {tool_id} for user: {request.userId}")
+    logger.info(f"Deleting tool {request.toolId} for user: {request.userId}")
 
     # 参数校验
     errors = []
@@ -1304,10 +1304,10 @@ async def delete_tool(tool_id: int, request: ToolDeleteRequest):
                         "message": "Tool record not found"
                     }
                 )
-
+            logger.info(f"tool result:{result}")
             # 校验用户ID是否匹配
-            record_user_id = result[0]
-            if record_user_id != request.userId:
+            record_user_id = result["user_id"]
+            if str(record_user_id) != request.userId:
                 logger.warning(f"User {request.userId} not authorized to delete tool record {request.toolId}")
                 return JSONResponse(
                     status_code=403,
