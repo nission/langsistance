@@ -1117,7 +1117,7 @@ class ToolUpdateRequest(BaseModel):
     toolId: int
     title: Optional[str] = None
     description: Optional[str] = None
-    public: Optional[bool] = None
+    public: Optional[str] = None
 
 class ToolUpdateResponse(BaseModel):
     success: bool
@@ -1137,12 +1137,12 @@ class ToolQueryResponse(BaseModel):
     data: List[ToolItem]
     total: int
 
-@api.post("/update_tools/{tool_id}", response_model=ToolUpdateResponse)
-async def update_tool(tool_id: int, request: ToolUpdateRequest):
+@api.post("/update_tool", response_model=ToolUpdateResponse)
+async def update_tool(request: ToolUpdateRequest):
     """
     更新工具接口（仅允许更新title、description和public字段）
     """
-    logger.info(f"Updating tool {tool_id} for user: {request.userId}")
+    logger.info(f"Updating tool {request.toolId} for user: {request.userId}")
 
     # 参数校验
     errors = []
@@ -1174,11 +1174,11 @@ async def update_tool(tool_id: int, request: ToolUpdateRequest):
         with connection.cursor() as cursor:
             # 首先检查记录是否存在以及用户ID是否匹配
             check_sql = "SELECT user_id FROM tools WHERE id = %s AND status = %s"
-            cursor.execute(check_sql, (tool_id, 1))
+            cursor.execute(check_sql, (request.toolId, 1))
             result = cursor.fetchone()
 
             if not result:
-                logger.warning(f"Tool record {tool_id} not found or inactive")
+                logger.warning(f"Tool record {request.toolId} not found or inactive")
                 return JSONResponse(
                     status_code=404,
                     content={
@@ -1188,9 +1188,9 @@ async def update_tool(tool_id: int, request: ToolUpdateRequest):
                 )
 
             # 校验用户ID是否匹配
-            record_user_id = result[0]
-            if record_user_id != request.userId:
-                logger.warning(f"User {request.userId} not authorized to update tool record {tool_id}")
+            record_user_id = result["user_id"]
+            if str(record_user_id) != request.userId:
+                logger.warning(f"User {request.userId} not authorized to update tool record {request.toolId}")
                 return JSONResponse(
                     status_code=403,
                     content={
@@ -1204,20 +1204,17 @@ async def update_tool(tool_id: int, request: ToolUpdateRequest):
             update_params = []
 
             if request.title is not None:
-                update_fields.append("title = %s")
-                update_params.append(request.title)
+                update_fields.append("title = '" + request.title + "'")
 
             if request.description is not None:
-                update_fields.append("description = %s")
-                update_params.append(request.description)
+                update_fields.append("description = '" + request.description + "'")
 
             if request.public is not None:
-                update_fields.append("public = %s")
-                update_params.append(request.public)
+                update_fields.append("public = " + str(request.public))
 
             # 如果没有任何字段需要更新
             if not update_fields:
-                logger.info(f"No fields to update for tool record {tool_id}")
+                logger.info(f"No fields to update for tool record {request.toolId}")
                 return JSONResponse(
                     status_code=200,
                     content={
@@ -1227,14 +1224,15 @@ async def update_tool(tool_id: int, request: ToolUpdateRequest):
                 )
 
             # 添加工具ID到参数列表
-            update_params.append(tool_id)
+            update_params.append(request.toolId)
 
             # 更新数据库记录
             update_sql = f"UPDATE tools SET {', '.join(update_fields)} WHERE id = %s"
+            logger.info(f"update sql:{update_sql}")
             cursor.execute(update_sql, update_params)
             connection.commit()
 
-            logger.info(f"Tool record {tool_id} updated successfully")
+            logger.info(f"Tool record {request.toolId} updated successfully")
             return JSONResponse(
                 status_code=200,
                 content={
