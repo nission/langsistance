@@ -877,7 +877,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
             for row in results:
                 knowledge_item = KnowledgeItem(
                     id=row['id'],
-                    userId=row['user_id'],
+                    user_id=row['user_id'],
                     question=row['question'],
                     description=row['description'],
                     answer=row['answer'],
