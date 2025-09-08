@@ -1,5 +1,6 @@
 from typing import Dict, Any
 import json
+from pydantic import BaseModel, Field
 
 from sources.knowledge.knowledge import get_redis_connection, get_knowledge_tool
 from sources.utility import pretty_print, animate_thinking
@@ -8,13 +9,16 @@ from sources.tools.mcpFinder import MCP_finder
 from sources.memory import Memory
 from sources.logger import Logger
 
-from fastmcp import FastMCP
-
-from mcp_use.client import MCPClient
-from mcp_use.adapters import LangChainAdapter
+from langchain.tools import Tool, StructuredTool
 
 import os
 import time
+
+# 定义参数模型
+class DynamicToolFunction(BaseModel):
+    user_id: str = Field(description="user id")
+    query_id: str = Field(description="query id")
+    params: str = Field(description="params")
 
 class GeneralAgent(Agent):
 
@@ -136,25 +140,19 @@ class GeneralAgent(Agent):
     #     except Exception as e:
     #         raise Exception(f"get_tool failed: {str(e)}") from e
 
-    async def get_tools(self) -> dict:
+    async def get_tools(self) -> list:
         try:
+            tools = {}
             # 如果有知识库中的工具信息，则动态构建MCP工具
             if hasattr(self, 'knowledgeTool') and self.knowledgeTool:
                 # 获取工具信息
                 knowledge_item, tool_info = self.knowledgeTool
 
                 if tool_info:
-                    # 创建动态MCP服务器
-                    mcp = FastMCP("DynamicKnowledgeTool")
-
-                    # 解析工具参数
-                    try:
-                        tool_params = json.loads(tool_info.params) if tool_info.params else {}
-                    except json.JSONDecodeError:
-                        tool_params = {}
 
                     # 动态创建工具函数
-                    def dynamic_tool_function(query_id, user_id, **params):
+                    def dynamic_tool_function(user_id, query_id, params):
+                        self.logger.info(f"user id is {user_id} - query id is {query_id} - param is {params}")
                         try:
                             # 连接Redis
                             redis_conn = get_redis_connection()
@@ -188,33 +186,15 @@ class GeneralAgent(Agent):
                             self.logger.error(f"Failed to write to Redis: {str(e)}")
                             return None
 
-                        return f"执行了工具: {tool_info.title}，参数为: {kwargs}"
-
-                    # 使用工具信息动态注册工具
-                    # 工具名称使用tool_info.title，描述使用tool_info.description
-                    dynamic_tool = mcp.tool(
-                        name=tool_info.title.replace(" ", "_") if tool_info.title else knowledge_item["question"],
-                        description=tool_info.description if tool_info.description else ""
-                    )(dynamic_tool_function)
-
-                    # 创建临时配置文件用于mcp-use加载动态工具
-                    dynamic_config = {
-                        "mcpServers": {
-                            "dynamic_knowledge_tool": {
-                                "command": "python",
-                                "args": ["-c",
-                                         "from fastmcp import FastMCP; mcp = FastMCP('DynamicKnowledgeTool'); print('Dynamic tool server started')"]
-                            }
-                        }
-                    }
-
-                    # 使用mcp-use加载动态工具
-                    client = MCPClient.from_config(dynamic_config)
-                    adapter = LangChainAdapter()
-                    dynamic_tools = await adapter.create_tools(client)
+                    dynamic_tool = StructuredTool.from_function(
+                        func=dynamic_tool_function,
+                        name=tool_info.title.replace(" ", "_") if tool_info.title else "dynamic_knowledge_tool",
+                        description=tool_info.description if tool_info.description else "Dynamic knowledge tool",
+                        args_schema=DynamicToolFunction
+                    )
 
                     # 合并动态工具
-                    tools = dynamic_tools
+                    tools = [dynamic_tool]
                 else:
                     # 如果没有动态工具信息，使用默认配置
                     tools = None

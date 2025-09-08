@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from ollama import Client as OllamaClient
 from openai import OpenAI
 from langchain_openai import ChatOpenAI
-from langchain.agents import AgentType, initialize_agent, Tool
+from langchain.agents import create_openai_tools_agent
 from langchain.schema import SystemMessage, HumanMessage
 
 from sources.logger import Logger
@@ -232,14 +232,6 @@ class Provider:
         # ]
 
         try:
-            # agent = initialize_agent(
-            #     tools=tools,
-            #     llm=llm,
-            #     agent=AgentType.OPENAI_FUNCTIONS,  # 使用 OpenAI 函数调用
-            #     verbose=verbose  # 显示详细执行过程
-            # )
-            #
-            # response = agent.run(messages)
             # response = client.chat.completions.create(
             #     model=self.model,
             #     messages=history,
@@ -254,8 +246,8 @@ class Provider:
             if response.tool_calls:
                 print("模型请求调用工具:")
                 for tool_call in response.tool_calls:
-                    self.logger.info(f"工具名称: {tool_call.function.name}")
-                    self.logger.info(f"工具参数: {tool_call.function.arguments}")
+                    self.logger.info(f"工具名称: {tool_call['name']}")
+                    self.logger.info(f"工具参数: {tool_call['args']}")
             thought = response.content
             if verbose:
                 print(thought)
