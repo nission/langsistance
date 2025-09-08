@@ -73,9 +73,8 @@ class KnowledgeCreateRequest(BaseModel):
     description: str
     answer: str
     public: bool
-    embeddingId: int
-    model_name: str
-    tool_id: int
+    modelName: str
+    toolId: int
     params: str
 
 class KnowledgeCreateResponse(BaseModel):
@@ -402,14 +401,14 @@ async def create_knowledge_record(request: KnowledgeCreateRequest):
     if not request.answer or len(request.answer) > 5000:
         errors.append("answer is required and must be no more than 5000 characters")
 
-    if len(request.model_name) > 200:
-        errors.append("model_name must be no more than 200 characters")
+    if len(request.modelName) > 200:
+        errors.append("modelName must be no more than 200 characters")
 
     if len(request.params) > 5000:
         errors.append("params must be no more than 5000 characters")
 
-    if not request.tool_id:
-        errors.append("tool_id is required")
+    if not request.toolId:
+        errors.append("toolId is required")
 
     if errors:
         logger.error(f"Validation errors: {errors}")
@@ -430,7 +429,7 @@ async def create_knowledge_record(request: KnowledgeCreateRequest):
             # 插入数据
             sql = """
                   INSERT INTO knowledge
-                  (user_id, question, description, answer, public, embedding_id, model_name, tool_id, params, status)
+                  (user_id, question, description, answer, public, model_name, tool_id, params, status, embedding_id)
                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) \
                   """
             cursor.execute(sql, (
@@ -439,11 +438,11 @@ async def create_knowledge_record(request: KnowledgeCreateRequest):
                 request.description,
                 request.answer,
                 request.public,
-                request.embeddingId,
-                request.model_name,
-                request.tool_id,
+                request.modelName,
+                request.toolId,
                 request.params,
-                1
+                1,
+                0
             ))
             connection.commit()
 
