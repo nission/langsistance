@@ -100,6 +100,8 @@ class GeneralAgent(Agent):
                 if isinstance(params_data, dict):
                     tool_params_info = "工具参数要求:user id - query id\n"
                     for param_name, param_type in params_data.items():
+                        if param_name == "method" or param_name == "content-type":
+                            continue
                         tool_params_info += f"  - {param_name} ({param_type})\n"
                 else:
                     tool_params_info = f"工具参数: {tool_info.params}"
@@ -160,12 +162,13 @@ class GeneralAgent(Agent):
                             # 构造Redis键
                             redis_key = f"tool_request_{query_id}_{user_id}"
 
-                            params_json = ""
+
+                            param_dict = {"origin_params": json.loads(tool_info.params)}
                             if params:
                                 # 将参数转换为JSON并存储到Redis
-                                params_json = json.dumps(params)
-                            else:
-                                params_json = tool_info.params
+                                param_dict["llm_params"] = params
+
+                            params_json = json.dumps(param_dict)
 
                             redis_conn.set(redis_key, params_json)
 
