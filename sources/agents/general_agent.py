@@ -160,8 +160,13 @@ class GeneralAgent(Agent):
                             # 构造Redis键
                             redis_key = f"tool_request_{query_id}_{user_id}"
 
-                            # 将参数转换为JSON并存储到Redis
-                            params_json = json.dumps(params)
+                            params_json = ""
+                            if params:
+                                # 将参数转换为JSON并存储到Redis
+                                params_json = json.dumps(params)
+                            else:
+                                params_json = tool_info.params
+
                             redis_conn.set(redis_key, params_json)
 
                             # 轮询读取tool_response_{query_id}
