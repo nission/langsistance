@@ -4,8 +4,8 @@ CREATE DATABASE IF NOT EXISTS langsistance_db;
 -- 创建知识表
 USE langsistance_db;
 CREATE TABLE  knowledge (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(50) NOT NULL,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
     question VARCHAR(100) NOT NULL,
 	description VARCHAR(5000) NOT NULL,
 	answer VARCHAR(5000) NOT NULL,
@@ -17,12 +17,14 @@ CREATE TABLE  knowledge (
 	params VARCHAR(5000) NOT NULL,
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    PRIMARY KEY (id),
+    KEY idx_user_id_status (user_id,status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建工具表
 CREATE TABLE  tools (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(50) NOT NULL,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
     title VARCHAR(100) NOT NULL,
 	description VARCHAR(5000) NOT NULL,
 	url VARCHAR(1000) NOT NULL,
@@ -33,4 +35,6 @@ CREATE TABLE  tools (
 	params VARCHAR(5000) NOT NULL,
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+	PRIMARY KEY (id),
+    KEY idx_user_id_status (user_id,status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
