@@ -1067,7 +1067,7 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest):
                 # 使用记录ID作为键，将embedding存储到Redis中
                 redis_key = f"knowledge_embedding_{knowledge_id}"
                 redis_conn.set(redis_key, str(query_embedding))
-                logger.info(f"Embedding stored in Redis with key: {redis_key} - query embedding{query_embedding}")
+                logger.info(f"Embedding stored in Redis with key: {redis_key}")
             except Exception as redis_error:
                 logger.error(f"Failed to store embedding in Redis: {str(redis_error)}")
                 # 注意：即使Redis存储失败，我们也不会中断主流程
