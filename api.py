@@ -332,7 +332,7 @@ async def process_query(request: QueryRequest):
         return JSONResponse(status_code=429, content=query_resp.jsonify())
 
     try:
-        is_generating = True
+        # is_generating = True
         user_id = 11111111
         success = await think_wrapper(user_id, interaction, request.query, request.query_id)
         is_generating = False
