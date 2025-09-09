@@ -219,6 +219,7 @@ class GeneralAgent(Agent):
         # user_prompt = self.expand_prompt(prompt)
         user_prompt = self.generate_user_prompt(prompt, user_id, query_id)
         system_prompt = self.generate_system_prompt()
+        self.memory = []
         self.memory.push('user', user_prompt)
         self.memory.push('system', system_prompt)
         self.logger.info(f"memory:{self.memory}")
