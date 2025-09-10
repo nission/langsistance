@@ -1808,6 +1808,313 @@ async def save_tool_response(request: ToolResponseRequest):
             }
         )
 
+@api.get("/query_public_knowledge", response_model=KnowledgeQueryResponse)
+async def query_public_knowledge(query: str, limit: int = 10, offset: int = 0):
+    """
+    查询知识记录接口
+    """
+    logger.info(f"Querying public knowledge with query: {query}")
+
+    # 参数校验
+    errors = []
+
+    if limit <= 0 or limit > 100:
+        errors.append("limit must be between 1 and 100")
+
+    if offset < 0:
+        errors.append("offset must be greater than or equal to 0")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors,
+                "data": [],
+                "total": 0
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 构建查询条件
+            # 1. 用户ID匹配
+            # 2. 公开的知识 或者 用户自己的知识
+            # 3. question、description、answer字段模糊匹配
+            if query:
+                search_pattern = f"%{query}%"
+                where_condition = "AND (question LIKE %s OR description LIKE %s OR answer LIKE %s)"
+                params = [1, 2, search_pattern, search_pattern, search_pattern]
+            else:
+                where_condition = ""
+                params = [1, 2]
+
+            count_sql = f"""
+                        SELECT COUNT(*) as total \
+                        FROM knowledge
+                        WHERE status = %s
+                          AND  public = %s
+                          {where_condition} \
+                        """
+
+            cursor.execute(count_sql, params)
+            count_result = cursor.fetchone()
+            total = count_result['total'] if count_result else 0
+
+            if total == 0:
+                logger.info(f"No public knowledge with query: {query}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "No records found",
+                        "data": [],
+                        "total": 0
+                    }
+                )
+
+            # 查询数据
+            if query:
+                query_sql = f"""
+                            SELECT id, \
+                                   user_id, \
+                                   question, \
+                                   description, \
+                                   answer, public, model_name, tool_id, params, create_time, update_time
+                            FROM knowledge
+                            WHERE status = %s
+                               AND public = %s
+                              {where_condition}
+                            ORDER BY update_time DESC
+                                LIMIT %s \
+                            OFFSET %s \
+                            """
+                params = [1, 2, search_pattern, search_pattern, search_pattern, limit, offset]
+            else:
+                query_sql = """
+                            SELECT id, \
+                                   user_id, \
+                                   question, \
+                                   description, \
+                                   answer, public, model_name, tool_id, params, create_time, update_time
+                            FROM knowledge
+                            WHERE status = %s
+                               AND public = %s
+                            ORDER BY update_time DESC
+                                LIMIT %s \
+                            OFFSET %s \
+                            """
+                params = [1, 2, limit, offset]
+
+            cursor.execute(query_sql, params)
+            results = cursor.fetchall()
+
+            # 转换为KnowledgeItem对象列表
+            knowledge_items = []
+            for row in results:
+                knowledge_item = KnowledgeItem(
+                    id=row['id'],
+                    user_id=row['user_id'],
+                    question=row['question'],
+                    description=row['description'],
+                    answer=row['answer'],
+                    public=row['public'],
+                    model_name=row['model_name'] or "",
+                    tool_id=row['tool_id'] or 0,
+                    params=row['params'] or ""
+                )
+                # 处理时间字段
+                if row['create_time']:
+                    knowledge_item.create_time = row['create_time'].isoformat() if hasattr(row['create_time'],
+                                                                                         'isoformat') else str(
+                        row['create_time'])
+                if row['update_time']:
+                    knowledge_item.update_time = row['update_time'].isoformat() if hasattr(row['update_time'],
+                                                                                         'isoformat') else str(
+                        row['update_time'])
+
+                knowledge_items.append(knowledge_item)
+
+            logger.info(f"Found {len(knowledge_items)} public knowledge with query: {query}")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Knowledge records retrieved successfully",
+                    "data": [item.dict() for item in knowledge_items],
+                    "total": total
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error querying knowledge records: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}",
+                "data": [],
+                "total": 0
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
+@api.get("/query_public_tools", response_model=ToolQueryResponse)
+async def query_public_tools(query: str = "", limit: int = 10, offset: int = 0):
+    """
+    查询工具记录接口
+    """
+    logger.info(f"Querying public tool" + (f" with query: {query}" if query else ""))
+
+    # 参数校验
+    errors = []
+
+    if limit <= 0 or limit > 100:
+        errors.append("limit must be between 1 and 100")
+
+    if offset < 0:
+        errors.append("offset must be greater than or equal to 0")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors,
+                "data": [],
+                "total": 0
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 构建查询条件
+            # 1. 用户ID匹配
+            # 2. 公开的工具 或者 用户自己的工具
+            # 3. 如果query不为空，则进行title或description模糊匹配
+            if query:
+                search_pattern = f"%{query}%"
+                where_condition = "AND (title LIKE %s OR description LIKE %s)"
+                params = [1, 2, search_pattern, search_pattern]
+            else:
+                where_condition = ""
+                params = [1, 2]
+
+            count_sql = f"""
+                        SELECT COUNT(*) as total \
+                        FROM tools
+                        WHERE status = %s
+                          AND public = %s
+                          {where_condition} \
+                        """
+
+            cursor.execute(count_sql, params)
+            count_result = cursor.fetchone()
+            total = count_result['total'] if count_result else 0
+
+            if total == 0:
+                logger.info(f"No public tool" + (f" with query: {query}" if query else ""))
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "No records found",
+                        "data": [],
+                        "total": 0
+                    }
+                )
+
+            # 查询数据
+            if query:
+                query_sql = f"""
+                            SELECT id, \
+                                   user_id, \
+                                   title, \
+                                   description, \
+                                   url, push, public, status, timeout, params, create_time, update_time
+                            FROM tools
+                            WHERE status = %s
+                               AND public = %s
+                              {where_condition}
+                            ORDER BY update_time DESC
+                                LIMIT %s \
+                            OFFSET %s \
+                            """
+                params = [1, 2, search_pattern, search_pattern, limit, offset]
+            else:
+                query_sql = """
+                            SELECT id, \
+                                   user_id, \
+                                   title, \
+                                   description, \
+                                   url, push, public, status, timeout, params, create_time, update_time
+                            FROM tools
+                            WHERE status = %s
+                               AND public = %s
+                            ORDER BY update_time DESC
+                                LIMIT %s \
+                            OFFSET %s \
+                            """
+                params = [1, 2, limit, offset]
+
+            cursor.execute(query_sql, params)
+            results = cursor.fetchall()
+
+            # 转换为ToolItem对象列表
+            tool_items = []
+            for row in results:
+                tool_item = ToolItem(
+                    id=row['id'],
+                    user_id=str(row['user_id']),
+                    title=row['title'],
+                    description=row['description'],
+                    url=row['url'],
+                    push=row['push'],
+                    public=row['public'],
+                    status=row['status'],
+                    timeout=row['timeout'],
+                    params=row['params']
+                )
+                tool_items.append(tool_item)
+
+            logger.info(f"Found {len(tool_items)} public tool" + (f" with query: {query}" if query else ""))
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Tool records retrieved successfully",
+                    "data": [item.dict() for item in tool_items],
+                    "total": total
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error querying tool records: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}",
+                "data": [],
+                "total": 0
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
 if __name__ == "__main__":
     # Print startup info
     if is_running_in_docker():
