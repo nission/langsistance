@@ -2115,6 +2115,130 @@ async def query_public_tools(query: str = "", limit: int = 10, offset: int = 0):
         if connection:
             connection.close()
 
+class KnowledgeCopyRequest(BaseModel):
+    userId: str
+    knowledgeId: str
+
+class KnowledgeCopyResponse(BaseModel):
+    success: bool
+    message: str
+    id: Optional[int] = None
+
+@api.post("/copy_knowledge", response_model=KnowledgeCopyResponse)
+async def copy_knowledge(request: KnowledgeCopyRequest):
+    """
+    创建知识记录接口
+    """
+    logger.info(f"Copy knowledge record for user: {request.userId}")
+
+    # 参数校验
+    errors = []
+
+    if not request.userId or len(request.userId) > 50:
+        errors.append("userId is required and must be no more than 50 characters")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+
+            query_sql = f"""
+                        SELECT id, \
+                               user_id, \
+                               question, \
+                               description, \
+                               answer, public, model_name, tool_id, params
+                        FROM knowledge
+                        WHERE id = %s AND status = %s
+                        """
+            params = [request.knowledgeId, 1]
+
+            cursor.execute(query_sql, params)
+            results = cursor.fetchall()
+            if len(results) == 0:
+                logger.info(f"knowledge not exist: {request.knowledgeId}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "knowledge not exist"
+                    }
+                )
+            row = results[0]
+            logger.info(f"row:{row}")
+            # 插入数据
+            sql = """
+                  INSERT INTO knowledge
+                  (user_id, question, description, answer, public, model_name, tool_id, params, status, embedding_id)
+                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) \
+                  """
+            cursor.execute(sql, (
+                request.userId,
+                row["question"],
+                row["description"],
+                row["answer"],
+                row["public"],
+                row["model_name"],
+                row["tool_id"],
+                row["params"],
+                1,
+                0
+            ))
+            connection.commit()
+
+            # 获取插入的记录ID
+            record_id = cursor.lastrowid
+            logger.info(f"Knowledge record copied successfully with ID: {record_id}")
+
+            # 将 embedding 写入 Redis
+            try:
+                redis_conn = get_redis_connection()
+                # 使用记录ID作为键，将embedding存储到Redis中
+                origin_key = f"knowledge_embedding_{request.knowledgeId}"
+                new_key = f"knowledge_embedding_{record_id}"
+                query_embedding = redis_conn.get(origin_key)
+                redis_conn.set(new_key, str(query_embedding))
+                logger.info(f"Embedding stored in Redis with key: {new_key}")
+            except Exception as redis_error:
+                logger.error(f"Failed to store embedding in Redis: {str(redis_error)}")
+                # 注意：即使Redis存储失败，我们也不会中断主流程
+
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Knowledge record copied successfully",
+                    "id": record_id
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error copy knowledge: {str(e)}")
+        if connection:
+            connection.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
 if __name__ == "__main__":
     # Print startup info
     if is_running_in_docker():
