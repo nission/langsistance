@@ -234,7 +234,7 @@ def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
                 for row in results:
                     knowledge_item = KnowledgeItem(
                         id=row['id'],
-                        user_id=row['user_id'],
+                        user_id=str(row['user_id']),
                         question=row['question'],
                         description=row['description'] or "",
                         answer=row['answer'],
