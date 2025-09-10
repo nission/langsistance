@@ -46,7 +46,7 @@ class KnowledgeItem(BaseModel):
     question: str
     description: Optional[str] = None
     answer: str
-    public: Optional[bool]
+    public: Optional[int]
     model_name: Optional[str]
     tool_id: Optional[int]
     params: Optional[str] = None
