@@ -1060,7 +1060,7 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest):
 
             # 计算并存储 embedding
             query_embedding = get_embedding(request.knowledge_question + request.knowledge_answer)
-            logger.info(f"create embedding: {query_embedding}")
+
             # 将 embedding 写入 Redis
             try:
                 redis_conn = get_redis_connection()

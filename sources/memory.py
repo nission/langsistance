@@ -39,8 +39,8 @@ class Memory():
         # self.device = self.get_cuda_device()
         self.memory_compression = memory_compression
         self.model_provider = model_provider
-        if self.memory_compression:
-            self.download_model()
+        # if self.memory_compression:
+        #     self.download_model()
 
     def get_ideal_ctx(self, model_name: str) -> int | None:
         """
@@ -65,12 +65,12 @@ class Memory():
         self.logger.info(f"Estimated context size for {model_name}: {context_size} tokens.")
         return context_size
     
-    def download_model(self):
-        """Download the model if not already downloaded."""
-        animate_thinking("Loading memory compression model...", color="status")
-        self.tokenizer = AutoTokenizer.from_pretrained("pszemraj/led-base-book-summary")
-        self.model = AutoModelForSeq2SeqLM.from_pretrained("pszemraj/led-base-book-summary")
-        self.logger.info("Memory compression system initialized.")
+    # def download_model(self):
+    #     """Download the model if not already downloaded."""
+    #     animate_thinking("Loading memory compression model...", color="status")
+    #     self.tokenizer = AutoTokenizer.from_pretrained("pszemraj/led-base-book-summary")
+    #     self.model = AutoModelForSeq2SeqLM.from_pretrained("pszemraj/led-base-book-summary")
+    #     self.logger.info("Memory compression system initialized.")
     
     def get_filename(self) -> str:
         """Get the filename for the save file."""

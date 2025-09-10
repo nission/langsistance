@@ -292,7 +292,7 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
             knowledge_id = knowledge.id
             redis_key = f"knowledge_embedding_{knowledge_id}"
             embedding_str = redis_conn.get(redis_key)
-            logger.info(f"embedding key is {redis_key} - embedding string is {embedding_str}")
+            logger.info(f"embedding key is {redis_key}")
             if embedding_str:
                 # 将字符串转换回embedding列表
                 embedding = eval(embedding_str)  # 注意：在生产环境中应使用更安全的方法如json.loads
