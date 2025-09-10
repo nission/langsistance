@@ -1919,7 +1919,7 @@ async def query_public_knowledge(query: str, limit: int = 10, offset: int = 0):
             for row in results:
                 knowledge_item = KnowledgeItem(
                     id=row['id'],
-                    user_id=row['user_id'],
+                    user_id=str(row['user_id']),
                     question=row['question'],
                     description=row['description'],
                     answer=row['answer'],
