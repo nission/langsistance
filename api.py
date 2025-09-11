@@ -1655,7 +1655,7 @@ async def get_tool_request(request: ToolFetchRequest):
         try:
             tool_data_str = redis_conn.get(redis_key)
             if not tool_data_str:
-                logger.warning(f"No tool found in Redis with key: {redis_key}")
+                logger.warning(f"No tool request found in Redis with key: {redis_key}")
                 return JSONResponse(
                     status_code=404,
                     content={
