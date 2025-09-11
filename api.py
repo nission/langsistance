@@ -1487,6 +1487,86 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
     finally:
         if connection:
             connection.close()
+@api.get("/query_tool_by_id", response_model=ToolQueryResponse)
+async def query_tool_by_id(tool_id: int):
+    """
+    根据tool_id查询工具详情接口
+    """
+    logger.info(f"Querying tool by id: {tool_id}")
+
+    # 参数校验
+    if not tool_id:
+        logger.error("tool_id is required")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "tool_id is required"
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 查询指定ID且状态为有效的工具
+            query_sql = """
+                        SELECT id, \
+                               user_id, \
+                               title, \
+                               description, \
+                               url, push, public, status, timeout, params, create_time, update_time
+                        FROM tools
+                        WHERE id = %s AND status = %s
+                        """
+            cursor.execute(query_sql, (tool_id, 1))
+            result = cursor.fetchone()
+
+            if not result:
+                logger.info(f"No tool found with id: {tool_id}")
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "message": "Tool not found"
+                    }
+                )
+
+            # 转换为ToolItem对象
+            tool_item = ToolItem(
+                id=result['id'],
+                user_id=str(result['user_id']),
+                title=result['title'],
+                description=result['description'],
+                url=result['url'],
+                status=result['status'],
+                timeout=result['timeout'],
+                params=result['params']
+            )
+
+            logger.info(f"Tool found with id: {tool_id}")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Tool retrieved successfully",
+                    "data": tool_item.dict()
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error querying tool by id: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
 
 class QuestionRequest(BaseModel):
     userId: str
