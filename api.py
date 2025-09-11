@@ -4,13 +4,14 @@ import os, sys
 import uvicorn
 import configparser
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from celery import Celery
 from dotenv import load_dotenv
 
 # Import route modules
-from api_routes import knowledge, tools, query
+from api_routes import knowledge, tools, system, core
 from api_routes.models import *
 
 # Import existing components
@@ -150,123 +151,14 @@ async def think_wrapper(user_id, interaction, query, query_id):
         interaction.last_success = False
         raise e
 
-# Include route modules
-api.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
-api.include_router(tools.router, prefix="/api/tools", tags=["tools"])
-api.include_router(query.router, prefix="/api/query", tags=["query"])
-
-# Override query endpoints that need access to interaction
-@api.get("/is_active")
-async def is_active():
-    logger.info("Is active endpoint called")
-    return {"is_active": interaction.is_active}
-
-@api.get("/stop")
-async def stop():
-    logger.info("Stop endpoint called")
-    interaction.current_agent.request_stop()
-    return {"status": "stopped"}
-
-@api.get("/latest_answer")
-async def get_latest_answer():
-    global query_resp_history
-    if interaction.current_agent is None:
-        return {"error": "No agent available"}
-    
-    import uuid
-    uid = str(uuid.uuid4())
-    if not any(q["answer"] == interaction.current_agent.last_answer for q in query_resp_history):
-        query_resp = {
-            "done": "false",
-            "answer": interaction.current_agent.last_answer,
-            "reasoning": interaction.current_agent.last_reasoning,
-            "agent_name": interaction.current_agent.agent_name if interaction.current_agent else "None",
-            "success": interaction.current_agent.success,
-            "blocks": {f'{i}': block.jsonify() for i, block in enumerate(interaction.get_last_blocks_result())} if interaction.current_agent else {},
-            "status": interaction.current_agent.get_status_message if interaction.current_agent else "No status available",
-            "uid": uid
-        }
-        interaction.current_agent.last_answer = ""
-        interaction.current_agent.last_reasoning = ""
-        query_resp_history.append(query_resp)
-        return query_resp
-    
-    if query_resp_history:
-        return query_resp_history[-1]
-    return {"error": "No answer available"}
-
-@api.post("/query")
-async def process_query(request: QueryRequest):
-    global is_generating, query_resp_history
-    logger.info(f"Processing query: {request.query}")
-    logger.info("Processing start begin")
-    
-    from sources.schemas import QueryResponse
-    import uuid
-    
-    query_resp = QueryResponse(
-        done="false",
-        answer="",
-        reasoning="",
-        agent_name="Unknown",
-        success="false",
-        blocks={},
-        status="Ready",
-        uid=str(uuid.uuid4())
-    )
-    
-    if is_generating:
-        logger.warning("Another query is being processed, please wait.")
-        return query_resp.jsonify()
-
-    try:
-        user_id = 11111111
-        success = await think_wrapper(user_id, interaction, request.query, request.query_id)
-        is_generating = False
-
-        if not success:
-            query_resp.answer = interaction.last_answer
-            query_resp.reasoning = interaction.last_reasoning
-            return query_resp.jsonify()
-
-        if interaction.current_agent:
-            blocks_json = {f'{i}': block.jsonify() for i, block in enumerate(interaction.current_agent.get_blocks_result())}
-        else:
-            logger.error("No current agent found")
-            blocks_json = {}
-            query_resp.answer = "Error: No current agent"
-            return query_resp.jsonify()
-
-        logger.info(f"Answer: {interaction.last_answer}")
-        logger.info(f"Blocks: {blocks_json}")
-        query_resp.done = "true"
-        query_resp.answer = interaction.last_answer
-        query_resp.reasoning = interaction.last_reasoning
-        query_resp.agent_name = interaction.current_agent.agent_name
-        query_resp.success = str(interaction.last_success)
-        query_resp.blocks = blocks_json
-        
-        query_resp_dict = {
-            "done": query_resp.done,
-            "answer": query_resp.answer,
-            "agent_name": query_resp.agent_name,
-            "success": query_resp.success,
-            "blocks": query_resp.blocks,
-            "status": query_resp.status,
-            "uid": query_resp.uid
-        }
-        query_resp_history.append(query_resp_dict)
-
-        logger.info("Query processed successfully")
-        return query_resp.jsonify()
-    
-    except Exception as e:
-        logger.error(f"An error occurred: {str(e)}")
-        sys.exit(1)
-    finally:
-        logger.info("Processing finished")
-        if config.getboolean('MAIN', 'save_session'):
-            interaction.save_session()
+# Include route modules (without prefix to maintain original API structure)
+api.include_router(knowledge.router, tags=["knowledge"])
+api.include_router(tools.router, tags=["tools"])
+system_router = system.register_system_routes(logger, interaction, query_resp_history, config)
+api.include_router(system_router, tags=["system"])
+core_router = core.register_core_routes(logger, interaction, query_resp_history, config, is_generating, think_wrapper)
+api.include_router(core_router, tags=["core"])
+# Note: query router is not included as it contained conflicting endpoints and is now empty
 
 if __name__ == "__main__":
     # Print startup info
