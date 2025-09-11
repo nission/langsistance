@@ -253,12 +253,12 @@ class Provider:
             if response is None:
                 raise Exception("OpenAI response is empty.")
 
-            if response.tool_calls:
-                print("模型请求调用工具:")
-                for tool_call in response.tool_calls:
-                    self.logger.info(f"工具名称: {tool_call['name']}")
-                    self.logger.info(f"工具参数: {tool_call['args']}")
-            thought = response.content
+            # if response.tool_calls:
+            #     print("模型请求调用工具:")
+            #     for tool_call in response.tool_calls:
+            #         self.logger.info(f"工具名称: {tool_call['name']}")
+            #         self.logger.info(f"工具参数: {tool_call['args']}")
+            thought = response["output"]
             if verbose:
                 print(thought)
             return thought
