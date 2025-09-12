@@ -229,7 +229,7 @@ class Provider:
 
         # 定义一个提示模板，通常包含系统消息、历史消息、用户输入和Agent的临时思考区域
         prompt = ChatPromptTemplate.from_messages([
-            ("system", history[1]["content"]),
+            SystemMessage(content=history[1]["content"]),  # 这里使用SystemMessage，内容不会被模板解析
             # MessagesPlaceholder 用于保留和注入对话历史（variable_name 需与调用时传入的键一致）
             MessagesPlaceholder(variable_name="chat_history"),
             # HumanMessage 表示用户当前的输入（variable_name 需与调用时传入的键一致）
