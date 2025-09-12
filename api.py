@@ -767,7 +767,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
     """
     查询知识记录接口
     """
-    logger.info(f"Querying knowledge records for user: {userId} with query: {query}")
+    # logger.info(f"Querying knowledge records for user: {userId} with query: {query}")
 
     # 参数校验
     errors = []
@@ -897,7 +897,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
 
                 knowledge_items.append(knowledge_item)
 
-            logger.info(f"Found {len(knowledge_items)} knowledge records for user: {userId} with query: {query}")
+            # logger.info(f"Found {len(knowledge_items)} knowledge records for user: {userId} with query: {query}")
             return JSONResponse(
                 status_code=200,
                 content={
@@ -1341,7 +1341,7 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
     """
     查询工具记录接口
     """
-    logger.info(f"Querying tool records for user: {userId}" + (f" with query: {query}" if query else ""))
+    # logger.info(f"Querying tool records for user: {userId}" + (f" with query: {query}" if query else ""))
 
     # 参数校验
     errors = []
@@ -1462,7 +1462,7 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
                 )
                 tool_items.append(tool_item)
 
-            logger.info(f"Found {len(tool_items)} tool records for user: {userId}" + (f" with query: {query}" if query else ""))
+            # logger.info(f"Found {len(tool_items)} tool records for user: {userId}" + (f" with query: {query}" if query else ""))
             return JSONResponse(
                 status_code=200,
                 content={
