@@ -6,6 +6,7 @@ import faviconPng from "./logo.png";
 import Sidebar from "./components/Sidebar";
 import ChatInterface from "./components/ChatInterface";
 import KnowledgeBase from "./components/KnowledgeBase";
+import AgenticSeekHome from "./components/AgenticSeekHome";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 console.log("Using backend URL:", BACKEND_URL);
@@ -14,8 +15,8 @@ function App() {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [responseData, setResponseData] = useState(null);
+  const [, setError] = useState(null);
+  const [, setResponseData] = useState(null);
   const [isOnline, setIsOnline] = useState(false);
   const [status, setStatus] = useState("Agents ready");
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
@@ -105,7 +106,7 @@ function App() {
   const updateData = (data) => {
     setResponseData((prev) => ({
       ...prev,
-      blocks: data.blocks || prev.blocks || null,
+      blocks: data.blocks || (prev && prev.blocks) || null,
       done: data.done,
       answer: data.answer,
       agent_name: data.agent_name,
@@ -221,8 +222,10 @@ function App() {
               handleStop={handleStop}
               messagesEndRef={messagesEndRef}
             />
-          ) : (
+          ) : activeTab === "knowledge" ? (
             <KnowledgeBase />
+          ) : (
+            <AgenticSeekHome />
           )}
         </div>
       </main>

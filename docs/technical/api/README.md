@@ -35,14 +35,14 @@ api_routes/
 
 | 模块 | 路由前缀 | 说明 |
 |-----|----------|------|
-| 知识管理 | `/api/knowledge` | 知识库增删改查 |
-| 工具管理 | `/api/tools` | 工具管理和工具响应处理 |
-| 查询处理 | `/api/query` | 智能问答和系统状态 |
+| 知识管理 | `/` | 知识库增删改查 |
+| 工具管理 | `/` | 工具管理和工具响应处理 |
+| 查询处理 | `/` | 智能问答和系统状态 |
 
 ## 主要功能模块
 
 ### 1. 知识管理 (Knowledge Management)
-**路由前缀**: `/api/knowledge`
+**路由前缀**: `/`
 
 提供完整的知识库管理功能：
 - ✅ 创建知识记录
@@ -59,7 +59,7 @@ api_routes/
 - 权限控制
 
 ### 2. 工具管理 (Tools Management)
-**路由前缀**: `/api/tools`
+**路由前缀**: `/`
 
 提供工具和相关知识的管理功能：
 - ✅ 创建工具和知识记录（事务处理）
@@ -76,7 +76,7 @@ api_routes/
 - 工具执行状态跟踪
 
 ### 3. 查询处理 (Query Processing)
-**路由前缀**: `/api/query`
+**路由前缀**: `/`
 
 提供核心的智能问答功能：
 - ✅ 智能查询处理
@@ -97,40 +97,45 @@ api_routes/
 ### 知识管理端点
 | 方法 | 路径 | 说明 |
 |-----|------|------|
-| POST | `/api/knowledge/create_knowledge` | 创建知识记录 |
-| POST | `/api/knowledge/delete_knowledge` | 删除知识记录 |
-| POST | `/api/knowledge/update_knowledge` | 更新知识记录 |
-| GET | `/api/knowledge/query_knowledge` | 查询个人知识 |
-| GET | `/api/knowledge/query_public_knowledge` | 查询公开知识 |
-| POST | `/api/knowledge/copy_knowledge` | 复制知识记录 |
+| POST | `/create_knowledge` | 创建知识记录 |
+| POST | `/delete_knowledge` | 删除知识记录 |
+| POST | `/update_knowledge` | 修改知识记录 |
+| GET | `/query_knowledge` | 查询知识记录 |
+| GET | `/query_public_knowledge` | 查询公开知识记录 |
+| POST | `/copy_knowledge` | 复制知识记录 |
 
 ### 工具管理端点
 | 方法 | 路径 | 说明 |
 |-----|------|------|
-| POST | `/api/tools/create_tool_and_knowledge` | 创建工具和知识 |
-| POST | `/api/tools/update_tool` | 更新工具信息 |
-| POST | `/api/tools/delete_tool` | 删除工具记录 |
-| GET | `/api/tools/query_tools` | 查询个人工具 |
-| GET | `/api/tools/query_public_tools` | 查询公开工具 |
-| POST | `/api/tools/get_tool_request` | 获取工具请求 |
-| POST | `/api/tools/save_tool_response` | 保存工具响应 |
+| POST | `/create_tool_and_knowledge` | 创建工具和知识记录 |
+| POST | `/update_tool` | 更新工具 |
+| POST | `/delete_tool` | 删除工具 |
+| GET | `/query_tools` | 查询工具记录 |
+| GET | `/query_public_tools` | 查询公开工具记录 |
+| POST | `/get_tool_request` | 获取工具请求 |
+| POST | `/save_tool_response` | 保存工具响应 |
 
-### 查询处理端点
+### 核心查询端点
 | 方法 | 路径 | 说明 |
 |-----|------|------|
-| POST | `/api/query/query` | 智能查询处理 |
-| POST | `/api/query/find_knowledge_tool` | 查找知识工具 |
-| GET | `/api/query/latest_answer` | 获取最新答案 |
-| GET | `/api/query/health` | 健康检查 |
-| GET | `/api/query/is_active` | 查询活跃状态 |
-| GET | `/api/query/stop` | 停止当前任务 |
-| GET | `/api/query/screenshot` | 获取截图 |
+| GET | `/latest_answer` | 获取最新答案 |
+| POST | `/query` | 处理查询请求 |
+| GET | `/screenshot` | 获取截图 |
+| POST | `/find_knowledge_tool` | 根据问题查找相关知识和工具 |
+
+### 系统管理端点
+| 方法 | 路径 | 说明 |
+|-----|------|------|
+| GET | `/health` | 健康检查 |
+| GET | `/is_active` | 检查系统是否活跃 |
+| GET | `/stop` | 停止当前操作 |
 
 ## 使用示例
 
 ### 完整工作流程示例
 
 #### 1. 创建工具和知识
+```javascript
 ```javascript
 const createToolAndKnowledge = async () => {
   const data = {
@@ -155,7 +160,7 @@ const createToolAndKnowledge = async () => {
     knowledge_params: "{}"
   };
   
-  const response = await fetch('/api/tools/create_tool_and_knowledge', {
+  const response = await fetch('/create_tool_and_knowledge', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -164,12 +169,11 @@ const createToolAndKnowledge = async () => {
   return await response.json();
 };
 ```
-
 #### 2. 智能查询处理
 ```javascript
 const processQuery = async (question) => {
   // 提交查询
-  const queryResponse = await fetch('/api/query/query', {
+  const queryResponse = await fetch('/query', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -184,7 +188,7 @@ const processQuery = async (question) => {
   while (result.done !== "true") {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    const latestResponse = await fetch('/api/query/latest_answer');
+    const latestResponse = await fetch('/latest_answer');
     result = await latestResponse.json();
   }
   
@@ -195,7 +199,7 @@ const processQuery = async (question) => {
 #### 3. 知识工具匹配
 ```javascript
 const findRelevantTool = async (userId, question) => {
-  const response = await fetch('/api/query/find_knowledge_tool', {
+  const response = await fetch('/find_knowledge_tool', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -346,7 +350,7 @@ API 支持 Docker 容器化部署，自动检测容器环境并调整配置。
 - 数据库操作记录操作日志
 
 ### 健康检查
-使用 `/api/query/health` 端点进行服务健康检查。
+使用 `/health` 端点进行服务健康检查。
 
 ## 版本更新
 
