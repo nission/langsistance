@@ -167,8 +167,8 @@ class Interaction:
         if push_last_agent_memory:
             self.current_agent.memory.push('user', self.last_query)
             self.current_agent.memory.push('assistant', self.last_answer)
-        if self.last_answer == tmp:
-            self.last_answer = None
+        # if self.last_answer == tmp:
+        #     self.last_answer = None
         return True
     
     def get_updated_process_answer(self) -> str:
