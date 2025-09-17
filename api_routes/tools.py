@@ -823,7 +823,7 @@ async def save_tool_response(request: ToolResponseRequest):
     Returns:
         ToolResponseResponse: 操作结果响应
     """
-    logger.info(f"Saving tool response for user: {request.userId} with query_id: {request.query_id}")
+    logger.info(f"Saving tool response for user: {request.userId} with query_id: {request.query_id} - tool response: {request.tool_response}")
 
     try:
         # 参数校验
