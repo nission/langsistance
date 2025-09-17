@@ -1,8 +1,5 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* 移除全局重置，让 TailwindCSS 的 base 样式生效 */
+/* 只保留必要的全局样式 */
 
 html,
 body,
@@ -11,7 +8,8 @@ body,
   overflow: hidden;
 }
 
-body {
+/* 为非 TailwindCSS 组件保留的样式 */
+body.app-body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);

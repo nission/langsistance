@@ -14,7 +14,7 @@ const Sidebar = ({ activeTab, onTabChange }) => {
           </svg>
           <span>聊天</span>
         </button>
-        <button 
+        <button
           className={`nav-item ${activeTab === 'knowledge' ? 'active' : ''}`}
           onClick={() => onTabChange('knowledge')}
         >
@@ -25,6 +25,17 @@ const Sidebar = ({ activeTab, onTabChange }) => {
             <path d="M8 17H12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <span>知识库</span>
+        </button>
+        <button
+          className={`nav-item ${activeTab === 'public-knowledge' ? 'active' : ''}`}
+          onClick={() => onTabChange('public-knowledge')}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7V12C2 16.5 4.23 20.68 7.62 22.93C8.82 23.64 10.32 24 12 24C13.68 24 15.18 23.64 16.38 22.93C19.77 20.68 22 16.5 22 12V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 11V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 7H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span>公共知识库</span>
         </button>
       </nav>
     </div>
