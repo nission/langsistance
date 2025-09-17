@@ -180,6 +180,7 @@ class GeneralAgent(Agent):
 
                             while elapsed < timeout:
                                 response_value = redis_conn.get(response_key)
+                                self.logger.info(f"tool response:{response_value}")
                                 if response_value is not None:
                                     # 成功获取到响应值
                                     return response_value

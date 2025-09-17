@@ -21,8 +21,7 @@ def register_system_routes(app_logger, interaction_ref, query_resp_history_ref, 
     @router.get("/stop")
     async def stop():
         app_logger.info("Stop endpoint called")
-        if interaction_ref.current_agent:
-            interaction_ref.current_agent.request_stop()
+        interaction_ref.current_agent.request_stop()
         return JSONResponse(status_code=200, content={"status": "stopped"})
 
     return router
