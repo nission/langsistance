@@ -824,7 +824,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
             total = count_result['total'] if count_result else 0
 
             if total == 0:
-                logger.info(f"No knowledge records found for user: {userId} with query: {query}")
+                # logger.info(f"No knowledge records found for user: {userId} with query: {query}")
                 return JSONResponse(
                     status_code=200,
                     content={
@@ -1398,7 +1398,7 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
             total = count_result['total'] if count_result else 0
 
             if total == 0:
-                logger.info(f"No tool records found for user: {userId}" + (f" with query: {query}" if query else ""))
+                # logger.info(f"No tool records found for user: {userId}" + (f" with query: {query}" if query else ""))
                 return JSONResponse(
                     status_code=200,
                     content={
