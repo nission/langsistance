@@ -3,7 +3,7 @@ import { API_BASE_URL } from './constants'
 
 // 定义mock数据
 const mockLatestAnswer = {
-  answer: "这是来自mock服务的示例回答。AgenticSeek是一个强大的AI代理平台，可以处理各种任务。",
+  answer: "这是来自mock服务的示例回答。Langsistance是一个强大的AI代理平台，可以处理各种任务。",
   reasoning: "我使用了mock数据来生成这个回答，以演示在没有后端服务的情况下应用如何工作。",
   agent_name: "MockAgent",
   status: "已完成",
@@ -22,9 +22,9 @@ const mockPublicKnowledge = {
     {
       id: 1,
       userId: "mock-user-123",
-      question: "什么是AgenticSeek？",
-      description: "AgenticSeek平台介绍",
-      answer: "AgenticSeek是一个AI代理平台，可以处理各种任务。",
+      question: "什么是Langsistance？",
+      description: "Langsistance平台介绍",
+      answer: "Langsistance是一个AI代理平台，可以处理各种任务。",
       public: true,
       modelName: "MockModel",
       toolId: 1,
@@ -35,9 +35,9 @@ const mockPublicKnowledge = {
     {
       id: 2,
       userId: "mock-user-456",
-      question: "如何使用AgenticSeek？",
-      description: "AgenticSeek使用指南",
-      answer: "您可以通过输入问题与AgenticSeek交互，它会为您提供相关信息。",
+      question: "如何使用Langsistance？",
+      description: "Langsistance使用指南",
+      answer: "您可以通过输入问题与Langsistance交互，它会为您提供相关信息。",
       public: true,
       modelName: "MockModel",
       toolId: 2,

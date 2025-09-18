@@ -4,7 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:7777';
 
-const AgenticSeekHome = () => {
+const LangsistanceHome = () => {
   const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('knowledge');
   const [searchQuery, setSearchQuery] = useState('');
@@ -259,7 +259,7 @@ const AgenticSeekHome = () => {
           <div className="text-center">
             <div className="animate-fade-in">
               <h1 className={themeClasses.heroTitle}>
-                Agentic Seek
+                Langsistance
               </h1>
               <p className={themeClasses.heroSubtitle}>
                 智能知识与工具聚合平台
@@ -684,4 +684,4 @@ const AgenticSeekHome = () => {
   );
 };
 
-export default AgenticSeekHome;
+export default LangsistanceHome;

@@ -6,7 +6,7 @@ import faviconPng from "./logo.png";
 import Sidebar from "./components/Sidebar";
 import ChatInterface from "./components/ChatInterface";
 import KnowledgeBase from "./components/KnowledgeBase";
-import AgenticSeekHome from "./components/AgenticSeekHome";
+import LangsistanceHome from "./components/LangsistanceHome";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 console.log("Using backend URL:", BACKEND_URL);
@@ -171,10 +171,10 @@ function App() {
       <header className="header">
         <div className="header-brand">
           <div className="logo-container">
-            <img src={faviconPng} alt="AgenticSeek" className="logo-icon" />
+            <img src={faviconPng} alt="Langsistance" className="logo-icon" />
           </div>
           <div className="brand-text">
-            <h1>AgenticSeek</h1>
+            <h1>Langsistance</h1>
           </div>
         </div>
         <div className="header-status">
@@ -189,7 +189,7 @@ function App() {
         </div>
         <div className="header-actions">
           <a
-            href="https://github.com/Fosowl/agenticSeek"
+            href="https://github.com/Fosowl/langsistance"
             target="_blank"
             rel="noopener noreferrer"
             className="action-button github-link"
@@ -225,7 +225,7 @@ function App() {
           ) : activeTab === "knowledge" ? (
             <KnowledgeBase />
           ) : (
-            <AgenticSeekHome />
+            <LangsistanceHome />
           )}
         </div>
       </main>
