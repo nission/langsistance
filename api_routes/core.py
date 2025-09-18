@@ -154,7 +154,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             knowledge_item, tool_info = get_knowledge_tool(
                 request.userId,
                 request.question,
-                request.top_k if hasattr(request, 'top_k') else 3,
+                request.top_k,
                 0
             )
 
@@ -170,7 +170,14 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
             # 构建返回的知识记录对象
             knowledge_response = {
-                "userId": knowledge_item.user_id
+                "userId": knowledge_item.user_id,
+                "question": knowledge_item.question,
+                "description": knowledge_item.description,
+                "answer": knowledge_item.answer,
+                "public": knowledge_item.public,
+                "modelName": knowledge_item.model_name,
+                "toolId": knowledge_item.tool_id,
+                "params": knowledge_item.params
             }
 
             response_data = {

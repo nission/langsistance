@@ -229,13 +229,16 @@ class Provider:
 
         # 定义一个提示模板，通常包含系统消息、历史消息、用户输入和Agent的临时思考区域
         prompt = ChatPromptTemplate.from_messages([
-            ("system", history[1]["content"]),
+            SystemMessage(content=history[1]["content"]),  # 这里使用SystemMessage，内容不会被模板解析
+            # MessagesPlaceholder 用于保留和注入对话历史（variable_name 需与调用时传入的键一致）
+            MessagesPlaceholder(variable_name="chat_history"),
+            # HumanMessage 表示用户当前的输入（variable_name 需与调用时传入的键一致）
             ("human", "{input}"),
             MessagesPlaceholder("agent_scratchpad"),  # 用于存放Agent思考过程和工具调用的位置
         ])
         agent = create_openai_tools_agent(llm, tools, prompt)
         agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)  # verbose=True 打印详细日志
-        response = agent_executor.invoke({"input": history[0]["content"]})
+        response = agent_executor.invoke({"input": history[0]["content"], "chat_history": []})
         # messages = [
         #     SystemMessage(content=history["system"]),
         #     HumanMessage(content=history["user"])
@@ -253,12 +256,12 @@ class Provider:
             if response is None:
                 raise Exception("OpenAI response is empty.")
 
-            if response.tool_calls:
-                print("模型请求调用工具:")
-                for tool_call in response.tool_calls:
-                    self.logger.info(f"工具名称: {tool_call['name']}")
-                    self.logger.info(f"工具参数: {tool_call['args']}")
-            thought = response.content
+            # if response.tool_calls:
+            #     print("模型请求调用工具:")
+            #     for tool_call in response.tool_calls:
+            #         self.logger.info(f"工具名称: {tool_call['name']}")
+            #         self.logger.info(f"工具参数: {tool_call['args']}")
+            thought = response["output"]
             if verbose:
                 print(thought)
             return thought

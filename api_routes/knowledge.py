@@ -403,7 +403,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
     """
     查询知识记录接口
     """
-    logger.info(f"Querying knowledge records for user: {userId} with query: {query}")
+    # logger.info(f"Querying knowledge records for user: {userId} with query: {query}")
 
     # 参数校验
     errors = []
@@ -460,7 +460,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
             total = count_result['total'] if count_result else 0
 
             if total == 0:
-                logger.info(f"No knowledge records found for user: {userId} with query: {query}")
+                # logger.info(f"No knowledge records found for user: {userId} with query: {query}")
                 return JSONResponse(
                     status_code=200,
                     content={
@@ -533,7 +533,7 @@ async def query_knowledge_records(userId: str, query: str, limit: int = 10, offs
 
                 knowledge_items.append(knowledge_item)
 
-            logger.info(f"Found {len(knowledge_items)} knowledge records for user: {userId} with query: {query}")
+            # logger.info(f"Found {len(knowledge_items)} knowledge records for user: {userId} with query: {query}")
             return JSONResponse(
                 status_code=200,
                 content={
