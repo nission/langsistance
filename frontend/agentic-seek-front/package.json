@@ -17,8 +17,10 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "NODE_ENV=development react-scripts start",
+    "start:hot": "FAST_REFRESH=true NODE_ENV=development react-scripts start",
     "start:mock": "REACT_APP_MOCK_API=true react-scripts start",
+    "start:dev": "FAST_REFRESH=true REACT_APP_MOCK_API=true react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
