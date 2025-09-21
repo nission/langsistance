@@ -179,13 +179,25 @@ const LangsistanceHome = () => {
       });
       
       if (response.data.success) {
-        alert('复制成功！');
-        setShowModal(false);
-        // 可以选择将内容复制到剪贴板
+        // 尝试将内容复制到剪贴板
+        let clipboardSuccess = false;
         if (selectedKnowledge) {
-          const content = `问题: ${selectedKnowledge.question}\n描述: ${selectedKnowledge.description}\n答案: ${selectedKnowledge.answer}`;
-          navigator.clipboard.writeText(content);
+          try {
+            const content = `问题: ${selectedKnowledge.question}\n描述: ${selectedKnowledge.description}\n答案: ${selectedKnowledge.answer}`;
+            await navigator.clipboard.writeText(content);
+            clipboardSuccess = true;
+          } catch (clipboardErr) {
+            console.warn('剪贴板复制失败:', clipboardErr);
+          }
         }
+
+        // 显示综合结果提示
+        if (clipboardSuccess) {
+          alert('复制成功！知识已保存到您的知识库，内容已复制到剪贴板。');
+        } else {
+          alert('复制成功！知识已保存到您的知识库。');
+        }
+        setShowModal(false);
       } else {
         alert('复制失败: ' + response.data.message);
       }
@@ -447,7 +459,9 @@ const LangsistanceHome = () => {
                                     查看详情
                                   </button>
                                   <button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
                                       copyKnowledge(item.id);
                                       setOpenDropdown(null);
                                     }}
@@ -667,7 +681,11 @@ const LangsistanceHome = () => {
                     关闭
                   </button>
                   <button
-                    onClick={() => copyKnowledge(selectedKnowledge.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      copyKnowledge(selectedKnowledge.id);
+                    }}
                     className={`px-6 py-2.5 ${isDark ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700' : 'bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700'} text-white rounded-xl transition-all duration-200 shadow-medium hover:shadow-large font-medium flex items-center space-x-2`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

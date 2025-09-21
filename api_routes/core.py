@@ -46,7 +46,11 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
     async def process_query(request: QueryRequest):
         app_logger.info(f"Processing query: {request.query}")
         app_logger.info("Processing start begin")
-        
+
+        # 如果没有提供 query_id，自动生成一个
+        if not request.query_id:
+            request.query_id = str(uuid.uuid4())
+
         query_resp = QueryResponse(
             done="false",
             answer="",
