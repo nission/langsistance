@@ -52,7 +52,7 @@ class KnowledgeQueryResponse(BaseModel):
 
 class KnowledgeCopyRequest(BaseModel):
     userId: str
-    knowledgeId: str
+    knowledgeId: int
 
 class KnowledgeCopyResponse(BaseModel):
     success: bool

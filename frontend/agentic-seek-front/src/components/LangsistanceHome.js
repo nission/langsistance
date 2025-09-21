@@ -251,7 +251,7 @@ const LangsistanceHome = () => {
   const themeClasses = getThemeClasses();
 
   return (
-    <div className={themeClasses.mainBg}>
+    <div className={`${themeClasses.mainBg} overflow-x-hidden`}>
       {/* 现代化顶部英雄区 */}
       <div className="relative overflow-hidden">
         <div className={themeClasses.heroBg}></div>
@@ -340,7 +340,7 @@ const LangsistanceHome = () => {
         </div>
 
         {/* 现代化内容区域 */}
-        <div className="mb-8">
+        <div className="mb-8 min-h-[60vh]">
           {loading ? (
             <div className="flex flex-col justify-center items-center py-20">
               <div className="relative">
@@ -448,14 +448,15 @@ const LangsistanceHome = () => {
                                   </button>
                                   <button
                                     onClick={() => {
-                                      openKnowledgeModal(item);
+                                      copyKnowledge(item.id);
+                                      setOpenDropdown(null);
                                     }}
                                     className={themeClasses.dropdownItem}
                                   >
                                     <svg className="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>
-                                    复制内容
+                                    复制知识
                                   </button>
                                 </>
                               )}
@@ -539,10 +540,10 @@ const LangsistanceHome = () => {
 
       {/* 现代化知识详情模态框 */}
       {showModal && selectedKnowledge && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className={themeClasses.modalBg}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+          <div className={`${themeClasses.modalBg} my-4 sm:my-8 flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] w-full`}>
             {/* 模态框头部 */}
-            <div className={themeClasses.modalHeader}>
+            <div className={`${themeClasses.modalHeader} flex-shrink-0`}>
               <div className="absolute inset-0 bg-black/10"></div>
               <div className="relative flex justify-between items-start">
                 <div>
@@ -559,9 +560,9 @@ const LangsistanceHome = () => {
                 </button>
               </div>
             </div>
-            
+
             {/* 模态框内容 */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+            <div className="p-6 overflow-y-auto flex-1" style={{scrollbarWidth: 'thin'}}>
               <div className="space-y-6">
                 <div className={`${isDark ? 'bg-gradient-to-r from-blue-900/30 to-purple-900/30' : 'bg-gradient-to-r from-primary-50 to-accent-50'} rounded-2xl p-5`}>
                   <div className="flex items-start space-x-3">
@@ -653,10 +654,10 @@ const LangsistanceHome = () => {
             </div>
             
             {/* 模态框底部操作区 */}
-            <div className={`${isDark ? 'bg-gray-800/80 border-gray-700' : 'bg-secondary-50/80 border-secondary-200'} backdrop-blur-sm border-t p-6`}>
+            <div className={`${isDark ? 'bg-gray-800/80 border-gray-700' : 'bg-secondary-50/80 border-secondary-200'} backdrop-blur-sm border-t p-6 flex-shrink-0`}>
               <div className="flex justify-between items-center">
                 <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-secondary-500'}`}>
-                  💡 点击复制按钮将内容保存到剪贴板
+                  💡 点击复制按钮将知识保存到个人知识库
                 </div>
                 <div className="flex space-x-3">
                   <button
@@ -672,7 +673,7 @@ const LangsistanceHome = () => {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    <span>复制内容</span>
+                    <span>复制知识</span>
                   </button>
                 </div>
               </div>
