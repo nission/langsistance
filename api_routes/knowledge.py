@@ -600,10 +600,10 @@ async def query_public_knowledge(query: str, limit: int = 10, offset: int = 0):
             if query:
                 search_pattern = f"%{query}%"
                 where_condition = "AND (question LIKE %s OR description LIKE %s OR answer LIKE %s)"
-                params = [1, 2, search_pattern, search_pattern, search_pattern]
+                params = [1, 1, search_pattern, search_pattern, search_pattern]
             else:
                 where_condition = ""
-                params = [1, 2]
+                params = [1, 1]
 
             count_sql = f"""
                         SELECT COUNT(*) as total
@@ -645,7 +645,7 @@ async def query_public_knowledge(query: str, limit: int = 10, offset: int = 0):
                                 LIMIT %s
                             OFFSET %s
                             """
-                params = [1, 2, search_pattern, search_pattern, search_pattern, limit, offset]
+                params = [1, 1, search_pattern, search_pattern, search_pattern, limit, offset]
             else:
                 query_sql = """
                             SELECT id,
@@ -660,7 +660,7 @@ async def query_public_knowledge(query: str, limit: int = 10, offset: int = 0):
                                 LIMIT %s
                             OFFSET %s
                             """
-                params = [1, 2, limit, offset]
+                params = [1, 1, limit, offset]
 
             cursor.execute(query_sql, params)
             results = cursor.fetchall()
@@ -729,6 +729,9 @@ async def copy_knowledge(request: KnowledgeCopyRequest):
 
     if not request.userId or len(request.userId) > 50:
         errors.append("userId is required and must be no more than 50 characters")
+
+    if not request.knowledgeId:
+        errors.append("knowledgeId is required")
 
     if errors:
         logger.error(f"Validation errors: {errors}")

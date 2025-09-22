@@ -19,8 +19,7 @@ const KnowledgeBase = () => {
     description: '',
     answer: '',
     public: false,
-    embeddingId: 0,
-    model_name: '',
+    model_name: 'gpt-3.5-turbo',
     tool_id: 1,
     params: '{}'
   });
@@ -32,7 +31,7 @@ const KnowledgeBase = () => {
     try {
       // 这里使用一个默认的userId，实际应用中应该从认证系统获取
       const userId = '11111111';
-      const response = await axios.get(`${BACKEND_URL}/knowledge`, {
+      const response = await axios.get(`${BACKEND_URL}/query_knowledge`, {
         params: {
           userId,
           query,
@@ -73,13 +72,17 @@ const KnowledgeBase = () => {
       // 这里使用一个默认的userId，实际应用中应该从认证系统获取
       const userId = '11111111';
       const requestData = {
-        ...formData,
         userId,
-        embeddingId: parseInt(formData.embeddingId),
-        tool_id: parseInt(formData.tool_id)
+        question: formData.question,
+        description: formData.description,
+        answer: formData.answer,
+        public: formData.public,
+        modelName: formData.model_name,
+        toolId: parseInt(formData.tool_id),
+        params: formData.params
       };
-      
-      const response = await axios.post(`${BACKEND_URL}/knowledge`, requestData);
+
+      const response = await axios.post(`${BACKEND_URL}/create_knowledge`, requestData);
       
       if (response.data.success) {
         // 添加成功后重新获取数据
@@ -90,8 +93,7 @@ const KnowledgeBase = () => {
           description: '',
           answer: '',
           public: false,
-          embeddingId: 0,
-          model_name: '',
+          model_name: 'gpt-3.5-turbo',
           tool_id: 1,
           params: '{}'
         });
@@ -123,7 +125,11 @@ const KnowledgeBase = () => {
         tool_id: parseInt(formData.tool_id)
       };
       
-      const response = await axios.put(`${BACKEND_URL}/knowledge/${currentRecordId}`, requestData);
+      const requestDataWithId = {
+        ...requestData,
+        knowledgeId: currentRecordId
+      };
+      const response = await axios.post(`${BACKEND_URL}/update_knowledge`, requestDataWithId);
       
       if (response.data.success) {
         // 编辑成功后重新获取数据
@@ -134,8 +140,7 @@ const KnowledgeBase = () => {
           description: '',
           answer: '',
           public: false,
-          embeddingId: 0,
-          model_name: '',
+          model_name: 'gpt-3.5-turbo',
           tool_id: 1,
           params: '{}'
         });
@@ -160,7 +165,6 @@ const KnowledgeBase = () => {
       description: record.description,
       answer: record.answer,
       public: record.public,
-      embeddingId: record.embeddingId,
       model_name: record.model_name,
       tool_id: record.tool_id,
       params: record.params
@@ -180,7 +184,11 @@ const KnowledgeBase = () => {
     setError(null);
     
     try {
-      const response = await axios.delete(`${BACKEND_URL}/knowledge/${id}`);
+      const userId = '11111111';
+      const response = await axios.post(`${BACKEND_URL}/delete_knowledge`, {
+        userId,
+        knowledgeId: id
+      });
       
       if (response.data.success) {
         // 删除成功后重新获取数据
@@ -220,7 +228,6 @@ const KnowledgeBase = () => {
                 description: '',
                 answer: '',
                 public: false,
-                embeddingId: 0,
                 model_name: '',
                 tool_id: 1,
                 params: '{}'
@@ -325,18 +332,6 @@ const KnowledgeBase = () => {
                 </div>
                 
                 <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="embeddingId">嵌入ID:</label>
-                    <input
-                      type="number"
-                      id="embeddingId"
-                      name="embeddingId"
-                      value={formData.embeddingId}
-                      onChange={handleInputChange}
-                      className="form-input"
-                      required
-                    />
-                  </div>
                   
                   <div className="form-group checkbox-group">
                     <label>

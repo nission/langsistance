@@ -11,13 +11,31 @@ async function enableMocking() {
   // 1. 如果是开发环境且REACT_APP_MOCK_API环境变量为true，则启用
   // 2. 如果REACT_APP_MOCK_API_FORCE环境变量为true，则强制启用（用于测试环境）
   if (process.env.NODE_ENV === 'development' && process.env.REACT_APP_MOCK_API === 'true') {
-    const { worker } = await import('./mocks/browser');
-    worker.start();
-    console.log('Mocking enabled in development mode');
+    try {
+      const { worker } = await import('./mocks/browser');
+      await worker.start({
+        onUnhandledRequest: 'warn',
+        serviceWorker: {
+          url: '/mockServiceWorker.js'
+        }
+      });
+      console.log('Mocking enabled in development mode');
+    } catch (error) {
+      console.warn('Failed to start MSW:', error);
+    }
   } else if (process.env.REACT_APP_MOCK_API_FORCE === 'true') {
-    const { worker } = await import('./mocks/browser');
-    worker.start();
-    console.log('Mocking force enabled');
+    try {
+      const { worker } = await import('./mocks/browser');
+      await worker.start({
+        onUnhandledRequest: 'warn',
+        serviceWorker: {
+          url: '/mockServiceWorker.js'
+        }
+      });
+      console.log('Mocking force enabled');
+    } catch (error) {
+      console.warn('Failed to start MSW:', error);
+    }
   }
 }
 
