@@ -20,7 +20,8 @@ function App() {
   const [isOnline, setIsOnline] = useState(false);
   const [status, setStatus] = useState("Agents ready");
   const [expandedReasoning, setExpandedReasoning] = useState(new Set());
-  const [activeTab, setActiveTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState("public-knowledge");
+  const [sidebarVisible, setSidebarVisible] = useState(false);
   const messagesEndRef = useRef(null);
 
   const fetchLatestAnswer = useCallback(async () => {
@@ -188,6 +189,16 @@ function App() {
           </div>
         </div>
         <div className="header-actions">
+          <button
+            onClick={() => setSidebarVisible(!sidebarVisible)}
+            className="action-button sidebar-toggle"
+            aria-label="Toggle Sidebar"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <span className="action-text">菜单</span>
+          </button>
           <a
             href="https://github.com/Fosowl/langsistance"
             target="_blank"
@@ -206,7 +217,7 @@ function App() {
         </div>
       </header>
       <main className="main">
-        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        {sidebarVisible && <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />}
         <div className="content-area">
           {activeTab === "chat" ? (
             <ChatInterface
