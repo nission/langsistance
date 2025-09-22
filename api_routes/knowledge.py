@@ -785,7 +785,7 @@ async def copy_knowledge(request: KnowledgeCopyRequest):
                 row["question"],
                 row["description"],
                 row["answer"],
-                row["public"],
+                1,
                 row["model_name"],
                 row["tool_id"],
                 row["params"],
