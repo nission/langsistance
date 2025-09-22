@@ -76,7 +76,7 @@ async def create_knowledge_record(request: KnowledgeCreateRequest):
                 request.description,
                 request.answer,
                 request.public,
-                request.modelName,
+                "gpt-4o-mini",
                 request.toolId,
                 request.params,
                 1,
