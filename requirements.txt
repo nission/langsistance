@@ -47,6 +47,10 @@ langchain>=0.3.27
 langchain-openai>=0.3.31
 redis>=6.4.0
 pymysql>=1.1.2
+sqlalchemy>=2.0.43
+passlib>=1.7.4
+python-jose>=3.5.0
+authlib>=1.6.4
 openai
 sniffio
 ordered_set
