@@ -38,3 +38,16 @@ CREATE TABLE  tools (
 	PRIMARY KEY (id),
     KEY idx_user_id_status (user_id,status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建用户表
+CREATE TABLE users (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255),
+    oauth_provider VARCHAR(255),
+    oauth_provider_id VARCHAR(255),
+    is_active TINYINT DEFAULT TRUE,
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -243,7 +243,7 @@ class Provider:
             if response is None:
                 raise Exception("OpenAI response is empty.")
 
-            thought = response["output"]
+            thought = response["messages"][-1].content
             if verbose:
                 print(thought)
             return thought
