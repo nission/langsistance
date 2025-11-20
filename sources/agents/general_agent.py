@@ -9,7 +9,7 @@ from sources.tools.mcpFinder import MCP_finder
 from sources.memory import Memory
 from sources.logger import Logger
 
-from langchain.tools import Tool, StructuredTool
+from langchain_core.tools import StructuredTool
 
 import os
 import time
