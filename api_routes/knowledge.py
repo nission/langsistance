@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from typing import List
 
@@ -13,16 +13,20 @@ from .models import (
 )
 from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection
 from sources.logger import Logger
+from sources.user.passport import verify_firebase_token
 
 logger = Logger("backend.log")
 router = APIRouter()
 
 @router.post("/create_knowledge", response_model=KnowledgeCreateResponse)
-async def create_knowledge_record(request: KnowledgeCreateRequest):
+async def create_knowledge_record(request: KnowledgeCreateRequest, http_request: Request):
     """
     创建知识记录接口
     """
     logger.info(f"Creating knowledge record for user: {request.userId}")
+
+    auth_header = http_request.headers.get("Authorization")
+    verify_firebase_token(auth_header)
 
     # 参数校验
     errors = []
@@ -126,11 +130,14 @@ async def create_knowledge_record(request: KnowledgeCreateRequest):
             connection.close()
 
 @router.post("/delete_knowledge", response_model=KnowledgeDeleteResponse)
-async def delete_knowledge_record(request: KnowledgeDeleteRequest):
+async def delete_knowledge_record(request: KnowledgeDeleteRequest, http_request: Request):
     """
     删除知识记录接口
     """
     logger.info(f"Deleting knowledge record {request.knowledgeId} for user: {request.userId}")
+
+    auth_header = http_request.headers.get("Authorization")
+    verify_firebase_token(auth_header)
 
     # 参数校验
     errors = []
@@ -227,11 +234,14 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest):
             connection.close()
 
 @router.post("/update_knowledge", response_model=KnowledgeUpdateResponse)
-async def update_knowledge_record(request: KnowledgeUpdateRequest):
+async def update_knowledge_record(request: KnowledgeUpdateRequest, http_request: Request):
     """
     修改知识记录接口
     """
     logger.info(f"Updating knowledge record {request.knowledgeId} for user: {request.userId}")
+
+    auth_header = http_request.headers.get("Authorization")
+    verify_firebase_token(auth_header)
 
     # 参数校验
     errors = []
@@ -399,11 +409,16 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest):
             connection.close()
 
 @router.get("/query_knowledge", response_model=KnowledgeQueryResponse)
-async def query_knowledge_records(userId: str, query: str, limit: int = 10, offset: int = 0):
+async def query_knowledge_records(http_request: Request, query: str, limit: int = 10, offset: int = 0):
     """
     查询知识记录接口
     """
     # logger.info(f"Querying knowledge records for user: {userId} with query: {query}")
+
+    auth_header = http_request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    userId = user.get("uid")
 
     # 参数校验
     errors = []
@@ -718,11 +733,14 @@ async def query_public_knowledge(query: str, limit: int = 10, offset: int = 0):
             connection.close()
 
 @router.post("/copy_knowledge", response_model=KnowledgeCopyResponse)
-async def copy_knowledge(request: KnowledgeCopyRequest):
+async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
     """
     复制知识记录接口
     """
     logger.info(f"Copy knowledge record for user: {request.userId}")
+
+    auth_header = http_request.headers.get("Authorization")
+    verify_firebase_token(auth_header)
 
     # 参数校验
     errors = []
