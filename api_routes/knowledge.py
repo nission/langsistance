@@ -23,15 +23,17 @@ async def create_knowledge_record(request: KnowledgeCreateRequest, http_request:
     """
     创建知识记录接口
     """
-    logger.info(f"Creating knowledge record for user: {request.userId}")
-
     auth_header = http_request.headers.get("Authorization")
-    verify_firebase_token(auth_header)
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
+    logger.info(f"Creating knowledge record for user: {user_id}")
 
     # 参数校验
     errors = []
 
-    if not request.userId or len(request.userId) > 50:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if not request.question or len(request.question) > 100:
@@ -75,7 +77,7 @@ async def create_knowledge_record(request: KnowledgeCreateRequest, http_request:
                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                   """
             cursor.execute(sql, (
-                request.userId,
+                user_id,
                 request.question,
                 request.description,
                 request.answer,
@@ -134,15 +136,17 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest, http_request:
     """
     删除知识记录接口
     """
-    logger.info(f"Deleting knowledge record {request.knowledgeId} for user: {request.userId}")
-
     auth_header = http_request.headers.get("Authorization")
-    verify_firebase_token(auth_header)
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
+    logger.info(f"Deleting knowledge record {request.knowledgeId} for user: {user_id}")
 
     # 参数校验
     errors = []
 
-    if not request.userId or len(request.userId) > 50:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if not request.knowledgeId:
@@ -181,8 +185,8 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest, http_request:
 
             # 校验用户ID是否匹配
             record_user_id = result["user_id"]
-            if str(record_user_id) != request.userId:
-                logger.warning(f"User {request.userId} not authorized to delete knowledge record {request.knowledgeId}")
+            if str(record_user_id) != user_id:
+                logger.warning(f"User {user_id} not authorized to delete knowledge record {request.knowledgeId}")
                 return JSONResponse(
                     status_code=403,
                     content={
@@ -238,15 +242,17 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest, http_request:
     """
     修改知识记录接口
     """
-    logger.info(f"Updating knowledge record {request.knowledgeId} for user: {request.userId}")
-
     auth_header = http_request.headers.get("Authorization")
-    verify_firebase_token(auth_header)
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
+    logger.info(f"Updating knowledge record {request.knowledgeId} for user: {user_id}")
 
     # 参数校验
     errors = []
 
-    if not request.userId or len(request.userId) > 50:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if not request.knowledgeId:
@@ -303,8 +309,8 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest, http_request:
 
             # 校验用户ID是否匹配
             record_user_id = result["user_id"]
-            if str(record_user_id) != request.userId:
-                logger.warning(f"User {request.userId} not authorized to update knowledge record {request.knowledgeId}")
+            if str(record_user_id) != user_id:
+                logger.warning(f"User {user_id} not authorized to update knowledge record {request.knowledgeId}")
                 return JSONResponse(
                     status_code=403,
                     content={
@@ -418,12 +424,12 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
     auth_header = http_request.headers.get("Authorization")
     user = verify_firebase_token(auth_header)
 
-    userId = user.get("uid")
+    user_id = user.get("uid")
 
     # 参数校验
     errors = []
 
-    if not userId or len(userId) > 50:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if limit <= 0 or limit > 100:
@@ -457,10 +463,10 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
             if query:
                 search_pattern = f"%{query}%"
                 where_condition = "AND (question LIKE %s OR description LIKE %s OR answer LIKE %s)"
-                params = [1, userId, search_pattern, search_pattern, search_pattern]
+                params = [1, user_id, search_pattern, search_pattern, search_pattern]
             else:
                 where_condition = ""
-                params = [1, userId]
+                params = [1, user_id]
 
             count_sql = f"""
                         SELECT COUNT(*) as total
@@ -502,7 +508,7 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
                                 LIMIT %s
                             OFFSET %s
                             """
-                params = [1, userId, search_pattern, search_pattern, search_pattern, limit, offset]
+                params = [1, user_id, search_pattern, search_pattern, search_pattern, limit, offset]
             else:
                 query_sql = """
                             SELECT id,
@@ -517,7 +523,7 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
                                 LIMIT %s
                             OFFSET %s
                             """
-                params = [1, userId, limit, offset]
+                params = [1, user_id, limit, offset]
 
             cursor.execute(query_sql, params)
             results = cursor.fetchall()
@@ -737,15 +743,19 @@ async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
     """
     复制知识记录接口
     """
-    logger.info(f"Copy knowledge record for user: {request.userId}")
+
 
     auth_header = http_request.headers.get("Authorization")
-    verify_firebase_token(auth_header)
+    user = verify_firebase_token(auth_header)
+
+    user_id = user.get('uid')
+
+    logger.info(f"Copy knowledge record for user: {user_id}")
 
     # 参数校验
     errors = []
 
-    if not request.userId or len(request.userId) > 50:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if not request.knowledgeId:
@@ -799,7 +809,7 @@ async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                   """
             cursor.execute(sql, (
-                request.userId,
+                user_id,
                 row["question"],
                 row["description"],
                 row["answer"],
