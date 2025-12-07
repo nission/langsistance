@@ -425,6 +425,7 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
     user = verify_firebase_token(auth_header)
 
     user_id = user.get("uid")
+    email = user.get("email")  # 获取用户邮箱
 
     # 参数校验
     errors = []
@@ -456,6 +457,22 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
         # 获取数据库连接
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # 检查用户是否存在，如果不存在则创建用户
+            check_user_sql = "SELECT id FROM users WHERE firebase_uid = %s"
+            cursor.execute(check_user_sql, (user_id,))
+            user_result = cursor.fetchone()
+
+            if not user_result:
+                # 用户不存在，创建新用户
+                insert_user_sql = """
+                              INSERT INTO users 
+                              (firebase_id, email, is_active) 
+                              VALUES (%s, %s, %s)
+                          """
+                cursor.execute(insert_user_sql, (user_id, email, 1))
+                connection.commit()
+                logger.info(f"Created new user with id: {user_id} and email: {email}")
+
             # 构建查询条件
             # 1. 用户ID匹配
             # 2. 公开的知识 或者 用户自己的知识
@@ -850,6 +867,155 @@ async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
 
     except Exception as e:
         logger.error(f"Error copy knowledge: {str(e)}")
+        if connection:
+            connection.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
+
+@router.post("/authorize_knowledge_access")
+async def authorize_knowledge_access(request: Request, auth_request: dict):
+    """
+    知识授权接口
+    """
+    # 验证用户登录态
+    auth_header = request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user.get("uid")
+    target_email = auth_request.get("email")
+    knowledge_id = auth_request.get("knowledgeId")
+
+    # 参数校验
+    errors = []
+
+    if not user_id:
+        errors.append("User authentication failed")
+
+    if not target_email or len(target_email) > 255:
+        errors.append("Target email is required and must be no more than 255 characters")
+
+    if not knowledge_id:
+        errors.append("knowledgeId is required")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 检查知识是否存在且属于当前用户
+            check_knowledge_sql = "SELECT id, user_id, public FROM knowledge WHERE id = %s AND status = 1"
+            cursor.execute(check_knowledge_sql, (knowledge_id,))
+            knowledge_result = cursor.fetchone()
+
+            if not knowledge_result:
+                logger.warning(f"Knowledge record {knowledge_id} not found or inactive")
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "message": "Knowledge record not found or inactive"
+                    }
+                )
+
+            # 校验用户是否有权限授权该知识
+            knowledge_owner_id = str(knowledge_result["user_id"])
+            is_public = knowledge_result["public"]
+
+            if knowledge_owner_id != user_id:
+                logger.warning(f"User {user_id} not authorized to grant access to knowledge {knowledge_id}")
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "success": False,
+                        "message": "Not authorized to grant access to this knowledge"
+                    }
+                )
+
+            # 只有非公开的知识才能被授权
+            if is_public:
+                logger.warning(f"Cannot authorize access to public knowledge {knowledge_id}")
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "success": False,
+                        "message": "Cannot authorize access to public knowledge"
+                    }
+                )
+
+            # 检查目标用户是否存在
+            check_target_user_sql = "SELECT id FROM users WHERE email = %s"
+            cursor.execute(check_target_user_sql, (target_email,))
+            target_user_result = cursor.fetchone()
+
+            if not target_user_result:
+                logger.warning(f"Target user with email {target_email} not found")
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "message": "Target user not found"
+                    }
+                )
+
+            # 获取目标用户的user_id
+            target_user_id = target_user_result["id"]
+
+            # 检查是否已经存在相同的授权记录
+            check_auth_sql = "SELECT id FROM knowledge_auth WHERE user_id = %s AND email = %s AND knowledge_id = %s"
+            cursor.execute(check_auth_sql, (user_id, target_email, knowledge_id))
+            existing_auth = cursor.fetchone()
+
+            if existing_auth:
+                logger.info(f"Authorization already exists for user {target_email} on knowledge {knowledge_id}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "Authorization already exists"
+                    }
+                )
+
+            # 插入授权记录，使用目标用户的user_id
+            insert_auth_sql = """
+                INSERT INTO knowledge_auth 
+                (user_id, email, knowledge_id, knowledge_owner_uid, status) 
+                VALUES (%s, %s, %s, %s)
+            """
+            cursor.execute(insert_auth_sql, (target_user_id, target_email, knowledge_id, user_id, 1))
+            connection.commit()
+
+            logger.info(
+                f"Granted access to user {target_email} (user_id: {target_user_id}) for knowledge {knowledge_id}")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Knowledge access granted successfully"
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error authorizing knowledge access: {str(e)}")
         if connection:
             connection.rollback()
         return JSONResponse(
