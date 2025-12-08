@@ -199,7 +199,7 @@ def get_redis_connection():
 
 def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
     """
-    根据用户ID从数据库查询有效的知识记录
+    根据用户ID从数据库查询有效的知识记录，包括用户拥有的知识和被授权的知识
 
     Args:
         user_id (str): 用户ID
@@ -207,31 +207,60 @@ def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
     Returns:
         List[KnowledgeItem]: 用户的知识记录列表
     """
-    # 这里需要实现数据库连接和查询逻辑
-    # 参考api.py中的get_db_connection方法和查询逻辑
-
     try:
         connection = get_db_connection()
 
         try:
             with connection.cursor() as cursor:
-                # 查询用户有效的知识记录 (status=1表示有效)
-                # 包括用户自己的知识和公开的知识
-                query_sql = """
-                            SELECT id, user_id, question, description, answer, public, model_name, tool_id, params, create_time, update_time
-                            FROM knowledge
-                            WHERE status = %s
-                               AND user_id = %s
-                            ORDER BY update_time DESC
-                            """
+                # 查询用户自己的知识记录 (status=1表示有效)
+                user_knowledge_sql = """
+                    SELECT id, user_id, question, description, answer, public, model_name, tool_id, params, create_time, update_time
+                    FROM knowledge
+                    WHERE status = %s
+                       AND user_id = %s
+                    ORDER BY update_time DESC
+                """
 
-                cursor.execute(query_sql, (1, user_id))
-                results = cursor.fetchall()
-                logger.info(f"results:{results}")
+                cursor.execute(user_knowledge_sql, (1, user_id))
+                user_knowledge_results = cursor.fetchall()
+
+                # 查询用户被授权的知识ID
+                auth_knowledge_ids = []
+                auth_knowledge_sql = """
+                    SELECT knowledge_id 
+                    FROM knowledge_auth 
+                    WHERE email IN (SELECT email FROM users WHERE id = %s) 
+                      AND status = %s
+                """
+                cursor.execute(auth_knowledge_sql, (user_id, 1))
+                auth_results = cursor.fetchall()
+
+                # 提取被授权的知识ID
+                auth_knowledge_ids = [row['knowledge_id'] for row in auth_results]
+
+                # 查询被授权的知识记录
+                auth_knowledge_results = []
+                if auth_knowledge_ids:
+                    # 构造IN查询语句
+                    placeholders = ','.join(['%s'] * len(auth_knowledge_ids))
+                    auth_knowledge_query_sql = f"""
+                        SELECT id, user_id, question, description, answer, public, model_name, tool_id, params, create_time, update_time
+                        FROM knowledge
+                        WHERE status = %s
+                          AND id IN ({placeholders})
+                        ORDER BY update_time DESC
+                    """
+                    # 参数顺序：status, knowledge_ids..., public
+                    params = [1] + auth_knowledge_ids
+                    cursor.execute(auth_knowledge_query_sql, params)
+                    auth_knowledge_results = cursor.fetchall()
+
+                # 合并用户自己的知识和被授权的知识
+                all_results = user_knowledge_results + auth_knowledge_results
 
                 # 将查询结果转换为KnowledgeItem对象列表
                 knowledge_items = []
-                for row in results:
+                for row in all_results:
                     knowledge_item = KnowledgeItem(
                         id=row['id'],
                         user_id=str(row['user_id']),
@@ -246,6 +275,7 @@ def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
                         update_time=row['update_time'].isoformat() if row['update_time'] else None
                     )
                     knowledge_items.append(knowledge_item)
+
                 return knowledge_items
         finally:
             connection.close()
@@ -253,7 +283,6 @@ def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
     except Exception as e:
         pretty_print(f"Error querying user knowledge: {str(e)}", color="error")
         return []
-
 
 
 def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_threshold: float = 0) -> Tuple[

@@ -65,7 +65,8 @@ setup(
         "sqlalchemy>=2.0.43",
         "passlib>=1.7.4",
         "python-jose>=3.5.0",
-        "authlib>=1.6.4"
+        "authlib>=1.6.4",
+        "firebase-admin>=7.1.0"
     ],
     extras_require={
         "chinese": [
