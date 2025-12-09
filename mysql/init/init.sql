@@ -54,12 +54,12 @@ CREATE TABLE users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建知识授权表
-CREATE TABLE knowledge_auth (
+CREATE TABLE knowledge_share (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    from_user_id BIGINT NOT NULL,
+    to_user_id BIGINT NOT NULL DEFAULT 0,
+    to_user_email VARCHAR(255) UNIQUE NOT NULL DEFAULT '',
     knowledge_id BIGINT NOT NULL,
-    knowledge_owner_uid BIGINT NOT NULL,
     status TINYINT DEFAULT TRUE,
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

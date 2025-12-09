@@ -466,7 +466,7 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
                 # 用户不存在，创建新用户
                 insert_user_sql = """
                               INSERT INTO users 
-                              (firebase_id, email, is_active) 
+                              (firebase_uid, email, is_active) 
                               VALUES (%s, %s, %s)
                           """
                 cursor.execute(insert_user_sql, (user_id, email, 1))
@@ -951,37 +951,26 @@ async def authorize_knowledge_access(request: Request, auth_request: dict):
                     }
                 )
 
-            # 只有非公开的知识才能被授权
-            if is_public:
-                logger.warning(f"Cannot authorize access to public knowledge {knowledge_id}")
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "success": False,
-                        "message": "Cannot authorize access to public knowledge"
-                    }
-                )
-
             # 检查目标用户是否存在
-            check_target_user_sql = "SELECT id FROM users WHERE email = %s"
-            cursor.execute(check_target_user_sql, (target_email,))
-            target_user_result = cursor.fetchone()
-
-            if not target_user_result:
-                logger.warning(f"Target user with email {target_email} not found")
-                return JSONResponse(
-                    status_code=404,
-                    content={
-                        "success": False,
-                        "message": "Target user not found"
-                    }
-                )
+            # check_target_user_sql = "SELECT id FROM users WHERE email = %s"
+            # cursor.execute(check_target_user_sql, (target_email,))
+            # target_user_result = cursor.fetchone()
+            #
+            # if not target_user_result:
+            #     logger.warning(f"Target user with email {target_email} not found")
+            #     return JSONResponse(
+            #         status_code=404,
+            #         content={
+            #             "success": False,
+            #             "message": "Target user not found"
+            #         }
+            #     )
 
             # 获取目标用户的user_id
-            target_user_id = target_user_result["id"]
+            # target_user_id = target_user_result["id"]
 
             # 检查是否已经存在相同的授权记录
-            check_auth_sql = "SELECT id FROM knowledge_auth WHERE user_id = %s AND email = %s AND knowledge_id = %s"
+            check_auth_sql = "SELECT id FROM knowledge_share WHERE from_user_id = %s AND to_user_email = %s AND knowledge_id = %s"
             cursor.execute(check_auth_sql, (user_id, target_email, knowledge_id))
             existing_auth = cursor.fetchone()
 
@@ -997,15 +986,15 @@ async def authorize_knowledge_access(request: Request, auth_request: dict):
 
             # 插入授权记录，使用目标用户的user_id
             insert_auth_sql = """
-                INSERT INTO knowledge_auth 
-                (user_id, email, knowledge_id, knowledge_owner_uid, status) 
+                INSERT INTO knowledge_share
+                (to_user_email, knowledge_id, from_user_id, status) 
                 VALUES (%s, %s, %s, %s)
             """
-            cursor.execute(insert_auth_sql, (target_user_id, target_email, knowledge_id, user_id, 1))
+            cursor.execute(insert_auth_sql, (target_email, knowledge_id, user_id, 1))
             connection.commit()
 
             logger.info(
-                f"Granted access to user {target_email} (user_id: {target_user_id}) for knowledge {knowledge_id}")
+                f"Granted access to user {target_email} (from user_id: {user_id}) for knowledge {knowledge_id}")
             return JSONResponse(
                 status_code=200,
                 content={
