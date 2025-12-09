@@ -399,3 +399,115 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
     except Exception as e:
         logger.error(f"Error in find_knowledge_tool: {str(e)}")
         return None, None
+
+
+def create_tool_and_knowledge_records(tool_data: dict, knowledge_data: dict) -> dict:
+    """
+    创建工具和知识记录的核心功能
+
+    Args:
+        tool_data: 工具相关数据
+        knowledge_data: 知识相关数据
+
+    Returns:
+        dict: 包含操作结果的字典
+    """
+    connection = None
+    tool_id = None
+    knowledge_id = None
+
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+
+        # 开始事务
+        connection.begin()
+
+        # 1. 创建 Tool
+        with connection.cursor() as cursor:
+            # 插入 Tool 数据
+            tool_sql = """
+                       INSERT INTO tools
+                       (user_id, title, description, url, push, public, status, timeout, params)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                       """
+            cursor.execute(tool_sql, (
+                tool_data['user_id'],
+                tool_data['title'],
+                tool_data['description'],
+                tool_data['url'],
+                tool_data['push'],
+                tool_data['public'],
+                1,  # status
+                tool_data['timeout'],
+                tool_data['params']
+            ))
+
+            # 获取插入的 tool ID
+            tool_id = cursor.lastrowid
+            logger.info(f"Tool record created successfully with ID: {tool_id}")
+
+        # 2. 创建 Knowledge，使用刚刚创建的 tool_id
+        with connection.cursor() as cursor:
+            # 插入 Knowledge 数据，使用 tool_id
+            knowledge_sql = """
+                            INSERT INTO knowledge
+                            (user_id, question, description, answer, public, status, embedding_id, model_name, tool_id,
+                             params)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """
+            cursor.execute(knowledge_sql, (
+                knowledge_data['user_id'],
+                knowledge_data['question'],
+                knowledge_data['description'],
+                knowledge_data['answer'],
+                knowledge_data['public'],
+                1,  # status
+                knowledge_data['embedding_id'],
+                knowledge_data['model_name'],
+                tool_id,  # 使用刚刚创建的 tool_id
+                knowledge_data['params']
+            ))
+
+            # 获取插入的 knowledge ID
+            knowledge_id = cursor.lastrowid
+
+            # 计算并存储 embedding
+            query_embedding = get_embedding(knowledge_data['question'] + knowledge_data['answer'])
+
+            # 将 embedding 写入 Redis
+            try:
+                redis_conn = get_redis_connection()
+                # 使用记录ID作为键，将embedding存储到Redis中
+                redis_key = f"knowledge_embedding_{knowledge_id}"
+                redis_conn.set(redis_key, str(query_embedding))
+                logger.info(f"Embedding stored in Redis with key: {redis_key}")
+            except Exception as redis_error:
+                logger.error(f"Failed to store embedding in Redis: {str(redis_error)}")
+                # 注意：即使Redis存储失败，我们也不会中断主流程
+
+        # 提交事务
+        connection.commit()
+
+        logger.info(
+            f"Tool and knowledge records created successfully. Tool ID: {tool_id}, Knowledge ID: {knowledge_id}")
+        return {
+            "success": True,
+            "message": "Tool and knowledge records created successfully",
+            "tool_id": tool_id,
+            "knowledge_id": knowledge_id
+        }
+
+    except Exception as e:
+        logger.error(f"Error creating tool and knowledge records: {str(e)}")
+        if connection:
+            connection.rollback()
+        return {
+            "success": False,
+            "message": f"Internal server error: {str(e)}",
+            "tool_id": tool_id,
+            "knowledge_id": knowledge_id
+        }
+    finally:
+        if connection:
+            connection.close()

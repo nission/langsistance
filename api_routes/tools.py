@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from typing import List
 import json
@@ -13,190 +13,136 @@ from .models import (
     ToolFetchRequest, ToolFetchResponse,
     ToolResponseRequest, ToolResponseResponse
 )
-from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection
+from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection, create_tool_and_knowledge_records
 from sources.logger import Logger
+from sources.user.passport import verify_firebase_token
 
 logger = Logger("backend.log")
 router = APIRouter()
 
 @router.post("/create_tool_and_knowledge", response_model=ToolAndKnowledgeCreateResponse)
-async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest):
+async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest, http_request:  Request):
     """
     创建tool和knowledge记录接口
     首先创建tool，然后使用tool的id创建knowledge
     """
-    logger.info(f"Creating tool and knowledge records for user: {request.tool_userId}")
+    auth_header = http_request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
 
-    connection = None
-    try:
-        # 获取数据库连接
-        connection = get_db_connection()
+    user_id = user['uid']
 
-        # 开始事务
-        connection.begin()
+    logger.info(f"Creating tool and knowledge records for user: {user_id}")
 
-        tool_id = None
-        knowledge_id = None
+    # 参数校验 - Tool部分
+    tool_errors = []
 
-        # 1. 创建 Tool
-        with connection.cursor() as cursor:
-            # 参数校验
-            tool_errors = []
+    if not user_id or len(user_id) > 50:
+        tool_errors.append("tool_userId is required and must be no more than 50 characters")
 
-            if not request.tool_userId or len(request.tool_userId) > 50:
-                tool_errors.append("tool_userId is required and must be no more than 50 characters")
+    if not request.tool_title or len(request.tool_title) > 100:
+        tool_errors.append("tool_title is required and must be no more than 100 characters")
 
-            if not request.tool_title or len(request.tool_title) > 100:
-                tool_errors.append("tool_title is required and must be no more than 100 characters")
+    if not request.tool_description or len(request.tool_description) > 5000:
+        tool_errors.append("tool_description is required and must be no more than 5000 characters")
 
-            if not request.tool_description or len(request.tool_description) > 5000:
-                tool_errors.append("tool_description is required and must be no more than 5000 characters")
+    if not request.tool_url or len(request.tool_url) > 1000:
+        tool_errors.append("tool_url is required and must be no more than 1000 characters")
 
-            if not request.tool_url or len(request.tool_url) > 1000:
-                tool_errors.append("tool_url is required and must be no more than 1000 characters")
+    if len(request.tool_params) > 5000:
+        tool_errors.append("tool_params must be no more than 5000 characters")
 
-            if len(request.tool_params) > 5000:
-                tool_errors.append("tool_params must be no more than 5000 characters")
+    if tool_errors:
+        logger.error(f"Tool validation errors: {tool_errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Tool validation failed",
+                "errors": tool_errors,
+                "tool_id": None,
+                "knowledge_id": None
+            }
+        )
 
-            if tool_errors:
-                logger.error(f"Tool validation errors: {tool_errors}")
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "success": False,
-                        "message": "Tool validation failed",
-                        "errors": tool_errors,
-                        "tool_id": None,
-                        "knowledge_id": None
-                    }
-                )
+    # 参数校验 - Knowledge部分
+    knowledge_errors = []
 
-            # 插入 Tool 数据
-            tool_sql = """
-                       INSERT INTO tools
-                       (user_id, title, description, url, push, public, status, timeout, params)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                       """
-            cursor.execute(tool_sql, (
-                request.tool_userId,
-                request.tool_title,
-                request.tool_description,
-                request.tool_url,
-                request.tool_push,
-                request.tool_public,
-                1,  # status
-                request.tool_timeout,
-                request.tool_params
-            ))
+    if not request.knowledge_question or len(request.knowledge_question) > 100:
+        knowledge_errors.append("knowledge_question is required and must be no more than 100 characters")
 
-            # 获取插入的 tool ID
-            tool_id = cursor.lastrowid
-            logger.info(f"Tool record created successfully with ID: {tool_id}")
+    if not request.knowledge_description or len(request.knowledge_description) > 5000:
+        knowledge_errors.append("knowledge_description is required and must be no more than 5000 characters")
 
-        # 2. 创建 Knowledge，使用刚刚创建的 tool_id
-        with connection.cursor() as cursor:
-            # 参数校验
-            knowledge_errors = []
+    if not request.knowledge_answer or len(request.knowledge_answer) > 5000:
+        knowledge_errors.append("knowledge_answer is required and must be no more than 5000 characters")
 
-            if not request.knowledge_userId or len(request.knowledge_userId) > 50:
-                knowledge_errors.append("knowledge_userId is required and must be no more than 50 characters")
+    if len(request.knowledge_model_name) > 200:
+        knowledge_errors.append("knowledge_model_name must be no more than 200 characters")
 
-            if not request.knowledge_question or len(request.knowledge_question) > 100:
-                knowledge_errors.append("knowledge_question is required and must be no more than 100 characters")
+    if len(request.knowledge_params) > 5000:
+        knowledge_errors.append("knowledge_params must be no more than 5000 characters")
 
-            if not request.knowledge_description or len(request.knowledge_description) > 5000:
-                knowledge_errors.append("knowledge_description is required and must be no more than 5000 characters")
+    if knowledge_errors:
+        logger.error(f"Knowledge validation errors: {knowledge_errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Knowledge validation failed",
+                "errors": knowledge_errors,
+                "tool_id": None,
+                "knowledge_id": None
+            }
+        )
 
-            if not request.knowledge_answer or len(request.knowledge_answer) > 5000:
-                knowledge_errors.append("knowledge_answer is required and must be no more than 5000 characters")
+    # 准备工具数据
+    tool_data = {
+        'user_id': user_id,
+        'title': request.tool_title,
+        'description': request.tool_description,
+        'url': request.tool_url,
+        'push': request.tool_push,
+        'public': request.tool_public,
+        'timeout': request.tool_timeout,
+        'params': request.tool_params
+    }
 
-            if len(request.knowledge_model_name) > 200:
-                knowledge_errors.append("knowledge_model_name must be no more than 200 characters")
+    # 准备知识数据
+    knowledge_data = {
+        'user_id': user_id,
+        'question': request.knowledge_question,
+        'description': request.knowledge_description,
+        'answer': request.knowledge_answer,
+        'public': request.knowledge_public,
+        'embedding_id': request.knowledge_embeddingId,
+        'model_name': request.knowledge_model_name,
+        'params': request.knowledge_params
+    }
 
-            if len(request.knowledge_params) > 5000:
-                knowledge_errors.append("knowledge_params must be no more than 5000 characters")
+    # 调用核心功能方法
+    result = create_tool_and_knowledge_records(tool_data, knowledge_data)
 
-            if knowledge_errors:
-                logger.error(f"Knowledge validation errors: {knowledge_errors}")
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "success": False,
-                        "message": "Knowledge validation failed",
-                        "errors": knowledge_errors,
-                        "tool_id": tool_id,  # 已经创建的 tool_id
-                        "knowledge_id": None
-                    }
-                )
-
-            # 插入 Knowledge 数据，使用 tool_id
-            knowledge_sql = """
-                            INSERT INTO knowledge
-                            (user_id, question, description, answer, public, status, embedding_id, model_name, tool_id,
-                             params)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            """
-            cursor.execute(knowledge_sql, (
-                request.knowledge_userId,
-                request.knowledge_question,
-                request.knowledge_description,
-                request.knowledge_answer,
-                request.knowledge_public,
-                1,  # status
-                request.knowledge_embeddingId,
-                request.knowledge_model_name,
-                tool_id,  # 使用刚刚创建的 tool_id
-                request.knowledge_params
-            ))
-
-            # 获取插入的 knowledge ID
-            knowledge_id = cursor.lastrowid
-
-            # 计算并存储 embedding
-            query_embedding = get_embedding(request.knowledge_question + request.knowledge_answer)
-
-            # 将 embedding 写入 Redis
-            try:
-                redis_conn = get_redis_connection()
-                # 使用记录ID作为键，将embedding存储到Redis中
-                redis_key = f"knowledge_embedding_{knowledge_id}"
-                redis_conn.set(redis_key, str(query_embedding))
-                logger.info(f"Embedding stored in Redis with key: {redis_key}")
-            except Exception as redis_error:
-                logger.error(f"Failed to store embedding in Redis: {str(redis_error)}")
-                # 注意：即使Redis存储失败，我们也不会中断主流程
-
-        # 提交事务
-        connection.commit()
-
-        logger.info(
-            f"Tool and knowledge records created successfully. Tool ID: {tool_id}, Knowledge ID: {knowledge_id}")
+    if result["success"]:
         return JSONResponse(
             status_code=200,
             content={
                 "success": True,
-                "message": "Tool and knowledge records created successfully",
-                "tool_id": tool_id,
-                "knowledge_id": knowledge_id
+                "message": result["message"],
+                "tool_id": result["tool_id"],
+                "knowledge_id": result["knowledge_id"]
             }
         )
-
-    except Exception as e:
-        logger.error(f"Error creating tool and knowledge records: {str(e)}")
-        if connection:
-            connection.rollback()
+    else:
         return JSONResponse(
             status_code=500,
             content={
                 "success": False,
-                "message": f"Internal server error: {str(e)}",
-                "tool_id": tool_id,  # 如果 tool 已创建，返回其 ID
-                "knowledge_id": None
+                "message": result["message"],
+                "tool_id": result["tool_id"],
+                "knowledge_id": result["knowledge_id"]
             }
         )
-    finally:
-        if connection:
-            connection.close()
+
 
 @router.post("/update_tool", response_model=ToolUpdateResponse)
 async def update_tool(request: ToolUpdateRequest):

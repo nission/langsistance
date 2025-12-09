@@ -11,7 +11,7 @@ from .models import (
     KnowledgeQueryResponse, KnowledgeItem,
     KnowledgeCopyRequest, KnowledgeCopyResponse
 )
-from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection
+from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection, create_tool_and_knowledge_records
 from sources.logger import Logger
 from sources.user.passport import verify_firebase_token
 
@@ -1005,6 +1005,393 @@ async def authorize_knowledge_access(request: Request, auth_request: dict):
 
     except Exception as e:
         logger.error(f"Error authorizing knowledge access: {str(e)}")
+        if connection:
+            connection.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
+
+@router.post("/handle_knowledge_share")
+async def handle_knowledge_share(request: Request, handle_request: dict):
+    """
+    处理知识分享请求（接受或拒绝）
+    """
+    # 验证用户登录态
+    auth_header = request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user.get("uid")
+    email = user.get("email")
+    knowledge_share_id = handle_request.get("share_id")
+    action = handle_request.get("action")  # "accept" 或 "reject"
+
+    # 参数校验
+    errors = []
+
+    if not user_id:
+        errors.append("User authentication failed")
+
+    if not knowledge_share_id:
+        errors.append("shareId is required")
+
+    if not action or action not in ["accept", "reject"]:
+        errors.append("action must be either 'accept' or 'reject'")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 检查分享记录是否存在且是给当前用户的
+            check_share_sql = """
+                SELECT id, to_user_email, knowledge_id, from_user_id, to_user_email, 
+                       status
+                FROM knowledge_share
+                WHERE id = %s AND to_user_email = %s AND ks.status = 1
+            """
+            cursor.execute(check_share_sql, (knowledge_share_id, email))
+            share_result = cursor.fetchone()
+
+            if not share_result:
+                logger.warning(f"Knowledge share record {knowledge_share_id} not found or not for current user")
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "message": "Share record not found or not authorized"
+                    }
+                )
+
+            knowledge_id = share_result["knowledge_id"]
+            check_share_sql = """
+                SELECT question, description, answer, k.public, k.model_name, k.tool_id, k.params
+                FROM knowledge
+                WHERE id = %s AND ks.status = 1
+            """
+            cursor.execute(check_share_sql, (knowledge_id))
+            share_result = cursor.fetchone()
+
+            tool_id = share_result["tool_id"]
+            check_share_sql = """
+                SELECT ks.id, ks.to_user_email, ks.knowledge_id, ks.from_user_id, k.question, 
+                       k.description, k.answer, k.public, k.model_name, k.tool_id, k.params
+                FROM knowledge_share ks
+                JOIN knowledge k ON ks.knowledge_id = k.id
+                WHERE ks.id = %s AND ks.to_user_email = %s AND ks.status = 1
+            """
+            cursor.execute(check_share_sql, (knowledge_share_id, email))
+            share_result = cursor.fetchone()
+
+            if action == "reject":
+                # 拒绝分享，更新状态为已处理
+                update_share_sql = "UPDATE knowledge_share SET status = 0 WHERE id = %s"
+                cursor.execute(update_share_sql, (knowledge_share_id,))
+                connection.commit()
+
+                logger.info(f"User {user_id} rejected knowledge share {knowledge_share_id}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "Knowledge share rejected"
+                    }
+                )
+            else:  # accept
+                # 接受分享，首先复制知识记录
+                insert_knowledge_sql = """
+                    INSERT INTO knowledge 
+                    (user_id, question, description, answer, public, model_name, tool_id, params, status, embedding_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                cursor.execute(insert_knowledge_sql, (
+                    user_id,
+                    share_result["question"],
+                    share_result["description"],
+                    share_result["answer"],
+                    1,  # 设为私有
+                    share_result["model_name"],
+                    share_result["tool_id"],
+                    share_result["params"],
+                    1,
+                    0
+                ))
+                connection.commit()
+
+                # 获取新插入的知识记录ID
+                new_knowledge_id = cursor.lastrowid
+
+                # 复制工具（如果存在）
+                if tool_id:
+                    # 获取原工具信息
+                    get_tool_sql = """
+                        SELECT name, description, icon, definition, examples, user_id, public
+                        FROM tools 
+                        WHERE id = %s
+                    """
+                    cursor.execute(get_tool_sql, (tool_id,))
+                    tool_result = cursor.fetchone()
+
+                    if tool_result:
+                        # 插入新的工具记录
+                        insert_tool_sql = """
+                            INSERT INTO tools 
+                            (name, description, icon, definition, examples, user_id, public, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """
+                        cursor.execute(insert_tool_sql, (
+                            tool_result["name"],
+                            tool_result["description"],
+                            tool_result["icon"],
+                            tool_result["definition"],
+                            tool_result["examples"],
+                            user_id,  # 新的所有者
+                            1,  # 设为私有
+                            1
+                        ))
+                        connection.commit()
+
+                        # 获取新工具ID并更新知识记录
+                        new_tool_id = cursor.lastrowid
+                        update_knowledge_tool_sql = "UPDATE knowledge SET tool_id = %s WHERE id = %s"
+                        cursor.execute(update_knowledge_tool_sql, (new_tool_id, new_knowledge_id))
+                        connection.commit()
+
+                # 更新分享记录状态为已处理
+                update_share_sql = "UPDATE knowledge_share SET status = 0 WHERE id = %s"
+                cursor.execute(update_share_sql, (knowledge_share_id,))
+                connection.commit()
+
+                # 复制embedding到Redis
+                try:
+                    redis_conn = get_redis_connection()
+                    origin_key = f"knowledge_embedding_{knowledge_id}"
+                    new_key = f"knowledge_embedding_{new_knowledge_id}"
+                    query_embedding = redis_conn.get(origin_key)
+                    if query_embedding:
+                        redis_conn.set(new_key, query_embedding)
+                        logger.info(f"Embedding copied in Redis from {origin_key} to {new_key}")
+                except Exception as redis_error:
+                    logger.error(f"Failed to copy embedding in Redis: {str(redis_error)}")
+                    # 即使Redis操作失败，也不中断主流程
+
+                logger.info(
+                    f"User {user_id} accepted knowledge share {knowledge_share_id}, created knowledge {new_knowledge_id}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "Knowledge share accepted successfully",
+                        "knowledgeId": new_knowledge_id
+                    }
+                )
+
+    except Exception as e:
+        logger.error(f"Error handling knowledge share: {str(e)}")
+        if connection:
+            connection.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
+
+@router.post("/handle_knowledge_share")
+async def handle_knowledge_share(request: Request, handle_request: dict):
+    """
+    处理知识分享请求（接受或拒绝）
+    """
+    # 验证用户登录态
+    auth_header = request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user.get("uid")
+    email = user.get("email")
+    knowledge_share_id = handle_request.get("share_id")
+    action = handle_request.get("action")  # "accept" 或 "reject"
+
+    # 参数校验
+    errors = []
+
+    if not user_id:
+        errors.append("User authentication failed")
+
+    if not knowledge_share_id:
+        errors.append("shareId is required")
+
+    if not action or action not in ["accept", "reject"]:
+        errors.append("action must be either 'accept' or 'reject'")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 检查分享记录是否存在且是给当前用户的
+            check_share_sql = """
+                SELECT id, to_user_email, knowledge_id, from_user_id, status
+                FROM knowledge_share
+                WHERE id = %s AND to_user_email = %s AND status = 1
+            """
+            cursor.execute(check_share_sql, (knowledge_share_id, email))
+            share_result = cursor.fetchone()
+
+            if not share_result:
+                logger.warning(f"Knowledge share record {knowledge_share_id} not found or not for current user")
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "message": "Share record not found or not authorized"
+                    }
+                )
+
+            knowledge_id = share_result["knowledge_id"]
+
+            if action == "reject":
+                # 拒绝分享，更新状态为已处理
+                update_share_sql = "UPDATE knowledge_share SET status = 2 WHERE id = %s"
+                cursor.execute(update_share_sql, (knowledge_share_id,))
+                connection.commit()
+
+                logger.info(f"User {user_id} rejected knowledge share {knowledge_share_id}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "Knowledge share rejected"
+                    }
+                )
+            else:  # accept
+                # 先查询知识详情
+                knowledge_query_sql = """
+                    SELECT question, description, answer, public, model_name, tool_id, params, user_id
+                    FROM knowledge
+                    WHERE id = %s AND status = 1
+                """
+                cursor.execute(knowledge_query_sql, (knowledge_id,))
+                knowledge_result = cursor.fetchone()
+
+                if not knowledge_result:
+                    logger.warning(f"Knowledge record {knowledge_id} not found or inactive")
+                    return JSONResponse(
+                        status_code=404,
+                        content={
+                            "success": False,
+                            "message": "Knowledge record not found or inactive"
+                        }
+                    )
+
+                # 准备知识数据
+                knowledge_data = {
+                    'user_id': user_id,  # 新的所有者
+                    'question': knowledge_result['question'],
+                    'description': knowledge_result['description'],
+                    'answer': knowledge_result['answer'],
+                    'public': 1,  # 设为私有
+                    'embedding_id': 0,
+                    'model_name': knowledge_result['model_name'],
+                    'params': knowledge_result['params']
+                }
+
+                # 准备工具数据（如果存在）
+                tool_data = None
+                if knowledge_result['tool_id']:
+                    # 查询工具详情
+                    tool_query_sql = """
+                        SELECT name as title, description, url, push, public, timeout, params, user_id
+                        FROM tools
+                        WHERE id = %s AND status = 1
+                    """
+                    cursor.execute(tool_query_sql, (knowledge_result['tool_id'],))
+                    tool_result = cursor.fetchone()
+
+                    if tool_result:
+                        tool_data = {
+                            'user_id': user_id,  # 新的所有者
+                            'title': tool_result['title'],
+                            'description': tool_result['description'],
+                            'url': tool_result['url'],
+                            'push': tool_result['push'],
+                            'public': 1,  # 设为私有
+                            'timeout': tool_result['timeout'],
+                            'params': tool_result['params']
+                        }
+
+                # 调用核心方法创建工具和知识记录
+                result = create_tool_and_knowledge_records(tool_data, knowledge_data)
+
+                if not result["success"]:
+                    raise Exception(result["message"])
+
+                new_knowledge_id = result["knowledge_id"]
+
+                # 更新分享记录状态为已处理
+                update_share_sql = "UPDATE knowledge_share SET status = 2 WHERE id = %s"
+                cursor.execute(update_share_sql, (knowledge_share_id,))
+                connection.commit()
+
+                # 复制embedding到Redis
+                try:
+                    redis_conn = get_redis_connection()
+                    origin_key = f"knowledge_embedding_{knowledge_id}"
+                    new_key = f"knowledge_embedding_{new_knowledge_id}"
+                    query_embedding = redis_conn.get(origin_key)
+                    if query_embedding:
+                        redis_conn.set(new_key, query_embedding)
+                        logger.info(f"Embedding copied in Redis from {origin_key} to {new_key}")
+                except Exception as redis_error:
+                    logger.error(f"Failed to copy embedding in Redis: {str(redis_error)}")
+                    # 即使Redis操作失败，也不中断主流程
+
+                logger.info(
+                    f"User {user_id} accepted knowledge share {knowledge_share_id}, created knowledge {new_knowledge_id}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "Knowledge share accepted successfully",
+                        "knowledgeId": new_knowledge_id
+                    }
+                )
+
+    except Exception as e:
+        logger.error(f"Error handling knowledge share: {str(e)}")
         if connection:
             connection.rollback()
         return JSONResponse(
