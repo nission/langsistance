@@ -1451,9 +1451,9 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
             count_sql = """
                 SELECT COUNT(*) as total
                 FROM knowledge_share 
-                WHERE to_user_id = %s AND status = 1
+                WHERE to_user_email = %s AND status = 1
             """
-            cursor.execute(count_sql, (user_id,))
+            cursor.execute(count_sql, (email,))
             count_result = cursor.fetchone()
             total = count_result['total'] if count_result else 0
 
@@ -1473,11 +1473,11 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
             share_query_sql = """
                 SELECT id, knowledge_id, from_user_id, create_time
                 FROM knowledge_share 
-                WHERE to_user_id = %s AND status = 1
+                WHERE to_user_email = %s AND status = 1
                 ORDER BY create_time DESC
                 LIMIT %s OFFSET %s
             """
-            cursor.execute(share_query_sql, (user_id, limit, offset))
+            cursor.execute(share_query_sql, (email, limit, offset))
             share_results = cursor.fetchall()
 
             # 收集所有knowledge_id用于查询知识详情
