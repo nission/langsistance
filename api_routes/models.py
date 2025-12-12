@@ -142,3 +142,20 @@ class ToolResponseRequest(BaseModel):
 class ToolResponseResponse(BaseModel):
     success: bool
     message: str
+
+
+class OpenAPISpecRequest(BaseModel):
+    """
+    OpenAPI规范配置请求模型
+    """
+    spec_format: str  # "json" 或 "yaml"
+    spec_content: str  # OpenAPI规范内容
+
+
+class OpenAPISpecResponse(BaseModel):
+    """
+    OpenAPI规范配置响应模型
+    """
+    success: bool
+    message: str
+    tool_id: Optional[int] = None

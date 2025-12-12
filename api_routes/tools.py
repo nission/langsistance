@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from typing import List
 import json
+import yaml
 
 from .models import (
     ToolAndKnowledgeCreateRequest, ToolAndKnowledgeCreateResponse,
@@ -11,7 +12,8 @@ from .models import (
     ToolDeleteRequest, ToolDeleteResponse,
     ToolQueryResponse, ToolItem,
     ToolFetchRequest, ToolFetchResponse,
-    ToolResponseRequest, ToolResponseResponse
+    ToolResponseRequest, ToolResponseResponse,
+    OpenAPISpecRequest, OpenAPISpecResponse
 )
 from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection, create_tool_and_knowledge_records
 from sources.logger import Logger
@@ -937,6 +939,186 @@ async def query_tool_by_id(tool_id: int):
                 "message": f"Internal server error: {str(e)}"
             }
         )
+    finally:
+        if connection:
+            connection.close()
+
+@router.post("/create_tool_from_openapi", response_model=OpenAPISpecResponse)
+async def create_tool_from_openapi(request: OpenAPISpecRequest, http_request: Request):
+    """
+    从OpenAPI规范创建工具接口
+
+    Args:
+        request: 包含OpenAPI规范格式和内容的请求对象
+        http_request: HTTP请求对象，用于获取认证信息
+
+    Returns:
+        OpenAPISpecResponse: 工具创建结果响应
+    """
+    try:
+        # 验证用户身份
+        auth_header = http_request.headers.get("Authorization")
+        user = verify_firebase_token(auth_header)
+        user_id = user['uid']
+
+        logger.info(f"Creating tool from OpenAPI spec for user: {user_id}")
+
+        # 解析OpenAPI规范
+        if request.spec_format.lower() == "json":
+            try:
+                openapi_spec = json.loads(request.spec_content)
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON format: {str(e)}")
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "success": False,
+                        "message": f"Invalid JSON format: {str(e)}"
+                    }
+                )
+        elif request.spec_format.lower() == "yaml":
+            try:
+                openapi_spec = yaml.safe_load(request.spec_content)
+            except yaml.YAMLError as e:
+                logger.error(f"Invalid YAML format: {str(e)}")
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "success": False,
+                        "message": f"Invalid YAML format: {str(e)}"
+                    }
+                )
+        else:
+            logger.error("Invalid spec format. Must be 'json' or 'yaml'")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "Invalid spec format. Must be 'json' or 'yaml'"
+                }
+            )
+
+        # 提取必要信息
+        title = openapi_spec.get('info', {}).get('title', 'Untitled API')
+        description = openapi_spec.get('info', {}).get('description', '')
+
+        # 获取基础URL
+        base_url = ""
+        if 'servers' in openapi_spec and len(openapi_spec['servers']) > 0:
+            base_url = openapi_spec['servers'][0].get('url', '')
+
+        # 提取第一个路径作为工具URL的一部分
+        path_url = ""
+        paths = openapi_spec.get('paths', {})
+        if paths:
+            # 获取第一个路径
+            first_path = list(paths.keys())[0] if paths.keys() else ""
+            path_url = first_path
+
+        # 组合完整的URL
+        full_url = base_url.rstrip('/') + path_url
+
+        # 提取参数信息
+        parameters_info = {}
+        if paths:
+            first_path = list(paths.keys())[0] if paths.keys() else ""
+            path_item = paths.get(first_path, {})
+
+            # 遍历所有HTTP方法(GET, POST, etc.)
+            for method, operation in path_item.items():
+                if isinstance(operation, dict) and 'parameters' in operation:
+                    parameters_info[method] = operation['parameters']
+                    break  # 只取第一个有参数的方法
+
+        # 将参数信息序列化为JSON字符串
+        params = json.dumps(parameters_info) if parameters_info else "{}"
+
+        # 验证字段长度
+        errors = []
+        if not user_id or len(user_id) > 50:
+            errors.append("userId is required and must be no more than 50 characters")
+
+        if len(title) > 100:
+            errors.append("title must be no more than 100 characters")
+
+        if len(description) > 5000:
+            errors.append("description must be no more than 5000 characters")
+
+        if len(full_url) > 1000:
+            errors.append("url must be no more than 1000 characters")
+
+        if len(params) > 5000:
+            errors.append("spec content is too large, must be no more than 5000 characters")
+
+        if errors:
+            logger.error(f"Validation errors: {errors}")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "message": "Validation failed",
+                    "errors": errors
+                }
+            )
+
+        # 插入数据库
+        connection = None
+        try:
+            connection = get_db_connection()
+            with connection.cursor() as cursor:
+                insert_sql = """
+                    INSERT INTO tools 
+                    (user_id, title, description, url, push, public, status, timeout, params)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                cursor.execute(insert_sql, (
+                    user_id,
+                    title,
+                    description,
+                    full_url,  # 使用组合后的完整URL
+                    1,  # push默认为1
+                    1,  # public默认为1
+                    1,  # status默认为1(有效)
+                    30,  # timeout默认为30秒
+                    params  # 使用提取的参数信息
+                ))
+                connection.commit()
+
+                # 获取插入的记录ID
+                tool_id = cursor.lastrowid
+
+                logger.info(f"Tool created successfully with ID: {tool_id}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "Tool created successfully",
+                        "tool_id": tool_id
+                    }
+                )
+
+        except Exception as e:
+            if connection:
+                connection.rollback()
+            logger.error(f"Database error: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "message": f"Database error: {str(e)}"
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error creating tool from OpenAPI spec: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+
     finally:
         if connection:
             connection.close()
