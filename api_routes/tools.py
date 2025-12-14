@@ -39,7 +39,7 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest, http
     tool_errors = []
 
     if not user_id or len(user_id) > 50:
-        tool_errors.append("tool_userId is required and must be no more than 50 characters")
+        tool_errors.append("tool_user_id is required and must be no more than 50 characters")
 
     if not request.tool_title or len(request.tool_title) > 100:
         tool_errors.append("tool_title is required and must be no more than 100 characters")
@@ -147,17 +147,22 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest, http
 
 
 @router.post("/update_tool", response_model=ToolUpdateResponse)
-async def update_tool(request: ToolUpdateRequest):
+async def update_tool(request: ToolUpdateRequest,  http_request:  Request):
     """
     更新工具接口（仅允许更新title、description和public字段）
     """
-    logger.info(f"Updating tool {request.toolId} for user: {request.userId}")
+    auth_header = http_request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
+    logger.info(f"Updating tool {request.toolId} for user: {user_id}")
 
     # 参数校验
     errors = []
 
-    if not request.userId or len(request.userId) > 50:
-        errors.append("userId is required and must be no more than 50 characters")
+    if not user_id or len(user_id) > 50:
+        errors.append("user_id is required and must be no more than 50 characters")
 
     if request.title is not None and (not request.title or len(request.title) > 100):
         errors.append("title must be between 1 and 100 characters")
@@ -198,8 +203,8 @@ async def update_tool(request: ToolUpdateRequest):
 
             # 校验用户ID是否匹配
             record_user_id = result["user_id"]
-            if str(record_user_id) != request.userId:
-                logger.warning(f"User {request.userId} not authorized to update tool record {request.toolId}")
+            if str(record_user_id) != user_id:
+                logger.warning(f"User {user_id} not authorized to update tool record {request.toolId}")
                 return JSONResponse(
                     status_code=403,
                     content={
@@ -266,17 +271,22 @@ async def update_tool(request: ToolUpdateRequest):
             connection.close()
 
 @router.post("/delete_tool", response_model=ToolDeleteResponse)
-async def delete_tool(request: ToolDeleteRequest):
+async def delete_tool(request: ToolDeleteRequest, http_request:  Request):
     """
     删除工具接口（通过修改status字段实现软删除）
     """
-    logger.info(f"Deleting tool {request.toolId} for user: {request.userId}")
+    auth_header = http_request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
+    logger.info(f"Deleting tool {request.toolId} for user: {user_id}")
 
     # 参数校验
     errors = []
 
-    if not request.userId or len(request.userId) > 50:
-        errors.append("userId is required and must be no more than 50 characters")
+    if not user_id or len(user_id) > 50:
+        errors.append("user_id is required and must be no more than 50 characters")
 
     if not request.toolId:
         errors.append("toolId is required")
@@ -314,8 +324,8 @@ async def delete_tool(request: ToolDeleteRequest):
             logger.info(f"tool result:{result}")
             # 校验用户ID是否匹配
             record_user_id = result["user_id"]
-            if str(record_user_id) != request.userId:
-                logger.warning(f"User {request.userId} not authorized to delete tool record {request.toolId}")
+            if str(record_user_id) != user_id:
+                logger.warning(f"User {user_id} not authorized to delete tool record {request.toolId}")
                 return JSONResponse(
                     status_code=403,
                     content={
@@ -354,17 +364,22 @@ async def delete_tool(request: ToolDeleteRequest):
             connection.close()
 
 @router.get("/query_tools", response_model=ToolQueryResponse)
-async def query_tool_records(userId: str, query: str = "", limit: int = 10, offset: int = 0):
+async def query_tool_records(http_request: Request, query: str = "", limit: int = 10, offset: int = 0):
     """
     查询工具记录接口
     """
+    auth_header = http_request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
     # logger.info(f"Querying tool records for user: {userId}" + (f" with query: {query}" if query else ""))
 
     # 参数校验
     errors = []
 
-    if not userId or len(userId) > 50:
-        errors.append("userId is required and must be no more than 50 characters")
+    if not user_id or len(user_id) > 50:
+        errors.append("user_id is required and must be no more than 50 characters")
 
     if limit <= 0 or limit > 100:
         errors.append("limit must be between 1 and 100")
@@ -397,10 +412,10 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
             if query:
                 search_pattern = f"%{query}%"
                 where_condition = "AND (title LIKE %s OR description LIKE %s)"
-                params = [1, userId, search_pattern, search_pattern]
+                params = [1, user_id, search_pattern, search_pattern]
             else:
                 where_condition = ""
-                params = [1, userId]
+                params = [1, user_id]
 
             count_sql = f"""
                         SELECT COUNT(*) as total
@@ -442,7 +457,7 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
                                 LIMIT %s
                             OFFSET %s
                             """
-                params = [1, userId, search_pattern, search_pattern, limit, offset]
+                params = [1, user_id, search_pattern, search_pattern, limit, offset]
             else:
                 query_sql = """
                             SELECT id,
@@ -457,7 +472,7 @@ async def query_tool_records(userId: str, query: str = "", limit: int = 10, offs
                                 LIMIT %s
                             OFFSET %s
                             """
-                params = [1, userId, limit, offset]
+                params = [1, user_id, limit, offset]
 
             cursor.execute(query_sql, params)
             results = cursor.fetchall()
@@ -655,26 +670,31 @@ async def query_public_tools(query: str = "", limit: int = 10, offset: int = 0):
             connection.close()
 
 @router.post("/get_tool_request", response_model=ToolFetchResponse)
-async def get_tool_request(request: ToolFetchRequest):
+async def get_tool_request(request: ToolFetchRequest, http_request: Request):
     """
-    根据query_id和userId从Redis获取工具对象
+    根据query_id和user_id从Redis获取工具对象
 
     Args:
-        request: 包含query_id和userId的请求对象
+        request: 包含query_id和user_id的请求对象
 
     Returns:
         ToolFetchResponse: 包含工具对象的响应
     """
-    logger.info(f"get tool request for user: {request.userId} with query_id: {request.query_id}")
+    auth_header = http_request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
+    logger.info(f"get tool request for user: {user_id} with query_id: {request.query_id}")
 
     try:
         # 参数校验
-        if not request.userId or len(request.userId) > 50:
+        if not user_id or len(user_id) > 50:
             return JSONResponse(
                 status_code=400,
                 content={
                     "success": False,
-                    "message": "userId is required and must be no more than 50 characters"
+                    "message": "user_id is required and must be no more than 50 characters"
                 }
             )
 
@@ -702,7 +722,7 @@ async def get_tool_request(request: ToolFetchRequest):
             )
 
         # 构造Redis键
-        redis_key = f"tool_request_{request.query_id}_{request.userId}"
+        redis_key = f"tool_request_{request.query_id}_{user_id}"
 
         # 从Redis获取工具对象
         try:
@@ -761,26 +781,31 @@ async def get_tool_request(request: ToolFetchRequest):
         )
 
 @router.post("/save_tool_response", response_model=ToolResponseResponse)
-async def save_tool_response(request: ToolResponseRequest):
+async def save_tool_response(request: ToolResponseRequest, http_request: Request):
     """
     保存工具响应到Redis
 
     Args:
-        request: 包含query_id、userId和tool_response的请求对象
+        request: 包含query_id、user_id和tool_response的请求对象
 
     Returns:
         ToolResponseResponse: 操作结果响应
     """
-    logger.info(f"Saving tool response for user: {request.userId} with query_id: {request.query_id} - tool response: {request.tool_response}")
+    auth_header = http_request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
+    logger.info(f"Saving tool response for user: {user_id} with query_id: {request.query_id} - tool response: {request.tool_response}")
 
     try:
         # 参数校验
-        if not request.userId or len(request.userId) > 50:
+        if not user_id or len(user_id) > 50:
             return JSONResponse(
                 status_code=400,
                 content={
                     "success": False,
-                    "message": "userId is required and must be no more than 50 characters"
+                    "message": "user_id is required and must be no more than 50 characters"
                 }
             )
 
@@ -817,7 +842,7 @@ async def save_tool_response(request: ToolResponseRequest):
             )
 
         # 构造Redis键
-        redis_key = f"tool_response_{request.query_id}_{request.userId}"
+        redis_key = f"tool_response_{request.query_id}_{user_id}"
 
         # 将tool_response数据存储到Redis
         try:
@@ -862,11 +887,27 @@ async def save_tool_response(request: ToolResponseRequest):
             }
         )
 
+
 @router.get("/query_tool_by_id", response_model=ToolQueryResponse)
-async def query_tool_by_id(tool_id: int):
+async def query_tool_by_id(http_request: Request, tool_id: int):
     """
     根据tool_id查询工具详情接口
     """
+    user_id = None
+    user_authenticated = False
+
+    # 尝试验证用户身份
+    try:
+        auth_header = http_request.headers.get("Authorization")
+        if auth_header:
+            user = verify_firebase_token(auth_header)
+            user_id = user['uid']
+            user_authenticated = True
+    except Exception as e:
+        # 用户未登录或token验证失败
+        logger.info(f"User not authenticated: {str(e)}")
+        pass
+
     logger.info(f"Querying tool by id: {tool_id}")
 
     # 参数校验
@@ -908,13 +949,43 @@ async def query_tool_by_id(tool_id: int):
                     }
                 )
 
+            # 检查工具访问权限
+            tool_public = result['public']
+            tool_owner_id = str(result['user_id'])
+
+            # 如果工具不是公开的
+            if tool_public != 1:
+                # 用户未登录，无法访问私有工具
+                if not user_authenticated:
+                    logger.warning(f"Unauthorized access to private tool {tool_id} by unauthenticated user")
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "success": False,
+                            "message": "Access denied. This is a private tool."
+                        }
+                    )
+
+                # 用户已登录，但不是工具所有者
+                if user_id != tool_owner_id:
+                    logger.warning(f"Unauthorized access to private tool {tool_id} by user {user_id}")
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "success": False,
+                            "message": "Access denied. This is a private tool."
+                        }
+                    )
+
             # 转换为ToolItem对象
             tool_item = ToolItem(
                 id=result['id'],
-                user_id=str(result['user_id']),
+                user_id=tool_owner_id,
                 title=result['title'],
                 description=result['description'],
                 url=result['url'],
+                push=result['push'],
+                public=result['public'],
                 status=result['status'],
                 timeout=result['timeout'],
                 params=result['params']
@@ -942,6 +1013,7 @@ async def query_tool_by_id(tool_id: int):
     finally:
         if connection:
             connection.close()
+
 
 @router.post("/create_tool_from_openapi", response_model=OpenAPISpecResponse)
 async def create_tool_from_openapi(request: OpenAPISpecRequest, http_request: Request):
@@ -1036,7 +1108,7 @@ async def create_tool_from_openapi(request: OpenAPISpecRequest, http_request: Re
         # 验证字段长度
         errors = []
         if not user_id or len(user_id) > 50:
-            errors.append("userId is required and must be no more than 50 characters")
+            errors.append("user_id is required and must be no more than 50 characters")
 
         if len(title) > 100:
             errors.append("title must be no more than 100 characters")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, FileResponse
 import os
 import uuid
@@ -9,6 +9,7 @@ from sources.schemas import QueryResponse
 from sources.logger import Logger
 from api_routes.models import QueryRequest, QuestionRequest
 from sources.knowledge.knowledge import get_knowledge_tool
+from sources.user.passport import verify_firebase_token
 
 router = APIRouter()
 
@@ -130,18 +131,23 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
         )
 
     @router.post("/find_knowledge_tool")
-    async def find_knowledge_tool(request: QuestionRequest):
+    async def find_knowledge_tool(request: QuestionRequest, http_request: Request):
         """根据用户问题查找最相关的知识及其对应的工具"""
-        app_logger.info(f"Finding knowledge tool for user: {request.userId} with question: {request.question}")
+        auth_header = http_request.headers.get("Authorization")
+        user = verify_firebase_token(auth_header)
+
+        user_id = user['uid']
+
+        app_logger.info(f"Finding knowledge tool for user: {user_id} with question: {request.question}")
 
         try:
             # 参数校验
-            if not request.userId or len(request.userId) > 50:
+            if not user_id or len(user_id) > 50:
                 return JSONResponse(
                     status_code=400,
                     content={
                         "success": False,
-                        "message": "userId is required and must be no more than 50 characters"
+                        "message": "user_id is required and must be no more than 50 characters"
                     }
                 )
 
@@ -156,7 +162,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
             # 调用knowledge.py中的方法获取知识项和工具信息
             knowledge_item, tool_info = get_knowledge_tool(
-                request.userId,
+                user_id,
                 request.question,
                 request.top_k,
                 0
@@ -199,7 +205,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
                 }
                 response_data["tool"] = tool_response
 
-            app_logger.info(f"Successfully found knowledge and tool for user: {request.userId}")
+            app_logger.info(f"Successfully found knowledge and tool for user: {user_id}")
             return JSONResponse(
                 status_code=200,
                 content=response_data
