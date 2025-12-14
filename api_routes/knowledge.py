@@ -755,12 +755,12 @@ async def query_public_knowledge(query: str, limit: int = 10, offset: int = 0):
         if connection:
             connection.close()
 
+
 @router.post("/copy_knowledge", response_model=KnowledgeCopyResponse)
 async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
     """
-    复制知识记录接口
+    复制知识记录接口（包括关联的工具）
     """
-
 
     auth_header = http_request.headers.get("Authorization")
     user = verify_firebase_token(auth_header)
@@ -795,12 +795,10 @@ async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
         connection = get_db_connection()
         with connection.cursor() as cursor:
 
-            query_sql = f"""
-                        SELECT id,
-                               user_id,
-                               question,
-                               description,
-                               answer, public, model_name, tool_id, params
+            # 查询要复制的知识记录
+            query_sql = """
+                        SELECT id, user_id, question, description, answer, 
+                               public, model_name, tool_id, params
                         FROM knowledge
                         WHERE id = %s AND status = %s
                         """
@@ -817,51 +815,60 @@ async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
                         "message": "knowledge not exist"
                     }
                 )
+
             row = results[0]
             logger.info(f"row:{row}")
-            # 插入数据
-            sql = """
-                  INSERT INTO knowledge
-                  (user_id, question, description, answer, public, model_name, tool_id, params, status, embedding_id)
-                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                  """
-            cursor.execute(sql, (
-                user_id,
-                row["question"],
-                row["description"],
-                row["answer"],
-                1,
-                row["model_name"],
-                row["tool_id"],
-                row["params"],
-                1,
-                0
-            ))
-            connection.commit()
 
-            # 获取插入的记录ID
-            record_id = cursor.lastrowid
-            logger.info(f"Knowledge record copied successfully with ID: {record_id}")
+            # 准备知识数据
+            knowledge_data = {
+                'user_id': user_id,  # 新的所有者
+                'question': row["question"],
+                'description': row["description"],
+                'answer': row["answer"],
+                'public': 1,  # 设为私有
+                'embedding_id': 0,
+                'model_name': row["model_name"],
+                'params': row["params"]
+            }
 
-            # 将 embedding 写入 Redis
-            try:
-                redis_conn = get_redis_connection()
-                # 使用记录ID作为键，将embedding存储到Redis中
-                origin_key = f"knowledge_embedding_{request.knowledgeId}"
-                new_key = f"knowledge_embedding_{record_id}"
-                query_embedding = redis_conn.get(origin_key)
-                redis_conn.set(new_key, str(query_embedding))
-                logger.info(f"Embedding stored in Redis with key: {new_key}")
-            except Exception as redis_error:
-                logger.error(f"Failed to store embedding in Redis: {str(redis_error)}")
-                # 注意：即使Redis存储失败，我们也不会中断主流程
+            # 准备工具数据（如果存在）
+            tool_data = None
+            if row["tool_id"]:
+                # 查询工具详情
+                tool_query_sql = """
+                    SELECT name as title, description, url, push, public, timeout, params, user_id
+                    FROM tools
+                    WHERE id = %s AND status = 1
+                """
+                cursor.execute(tool_query_sql, (row["tool_id"],))
+                tool_result = cursor.fetchone()
+
+                if tool_result:
+                    tool_data = {
+                        'user_id': user_id,  # 新的所有者
+                        'title': tool_result['title'],
+                        'description': tool_result['description'],
+                        'url': tool_result['url'],
+                        'push': tool_result['push'],
+                        'public': 1,  # 设为私有
+                        'timeout': tool_result['timeout'],
+                        'params': tool_result['params']
+                    }
+
+            # 调用核心方法创建工具和知识记录
+            result = create_tool_and_knowledge_records(tool_data, knowledge_data)
+
+            if not result["success"]:
+                raise Exception(result["message"])
+
+            new_knowledge_id = result["knowledge_id"]
 
             return JSONResponse(
                 status_code=200,
                 content={
                     "success": True,
                     "message": "Knowledge record copied successfully",
-                    "id": record_id
+                    "id": new_knowledge_id
                 }
             )
 
@@ -1163,19 +1170,6 @@ async def handle_knowledge_share(request: Request, handle_request: dict):
                 update_share_sql = "UPDATE knowledge_share SET status = 2 WHERE id = %s"
                 cursor.execute(update_share_sql, (knowledge_share_id,))
                 connection.commit()
-
-                # 复制embedding到Redis
-                try:
-                    redis_conn = get_redis_connection()
-                    origin_key = f"knowledge_embedding_{knowledge_id}"
-                    new_key = f"knowledge_embedding_{new_knowledge_id}"
-                    query_embedding = redis_conn.get(origin_key)
-                    if query_embedding:
-                        redis_conn.set(new_key, query_embedding)
-                        logger.info(f"Embedding copied in Redis from {origin_key} to {new_key}")
-                except Exception as redis_error:
-                    logger.error(f"Failed to copy embedding in Redis: {str(redis_error)}")
-                    # 即使Redis操作失败，也不中断主流程
 
                 logger.info(
                     f"User {user_id} accepted knowledge share {knowledge_share_id}, created knowledge {new_knowledge_id}")
