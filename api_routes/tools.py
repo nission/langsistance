@@ -15,7 +15,7 @@ from .models import (
     ToolResponseRequest, ToolResponseResponse,
     OpenAPISpecRequest, OpenAPISpecResponse
 )
-from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection, create_tool_and_knowledge_records
+from sources.knowledge.knowledge import get_db_connection, get_redis_connection, create_tool_and_knowledge_records
 from sources.logger import Logger
 from sources.user.passport import verify_firebase_token
 
