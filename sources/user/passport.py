@@ -3,6 +3,7 @@ from firebase_admin import auth, credentials
 from fastapi import HTTPException
 from sources.knowledge.knowledge import get_db_connection, get_redis_connection, create_tool_and_knowledge_records
 import random
+from datetime import datetime, timedelta, timezone
 
 cred = credentials.Certificate("firebase_service_key.json")
 firebase_admin.initialize_app(cred)
@@ -10,8 +11,24 @@ firebase_admin.initialize_app(cred)
 # 初始化 Redis 连接
 redis_client = get_redis_connection()  # 根据实际情况调整配置
 
+# 白名单配置 - 字典形式
+WHITELIST_TOKENS = {
+    "whitelist_token_1": {
+        'uid': 12957524084372015683,
+        'email': 'gray.yuehui@gmail.com'
+    },
+    # 可以添加更多白名单项
+    # "whitelist_token_2": {
+    #     'uid': 12345678901234567890,
+    #     'email': 'another.user@example.com'
+    # }
+}
 
 def verify_firebase_token(auth_header: str):
+    # 检查是否为白名单请求
+    if auth_header in WHITELIST_TOKENS:
+        return WHITELIST_TOKENS[auth_header]
+
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
 
@@ -86,3 +103,30 @@ def verify_firebase_token(auth_header: str):
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+def seconds_until_end_of_day() -> int:
+    now = datetime.now(timezone.utc)
+    tomorrow = (now + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    return int((tomorrow - now).total_seconds())
+
+MAX_DAILY_CALLS = 100
+
+async def check_and_increase_usage(user_id: int) -> bool:
+    """
+    返回 True：允许调用
+    返回 False：超过当日限制
+    """
+    today = datetime.utcnow().strftime("%Y%m%d")
+    key = f"api_usage:{user_id}:{today}"
+
+    count = await redis_client.incr(key)
+
+    if count == 1:
+        # 第一次使用，设置过期时间到当天结束
+        await redis_client.expire(key, seconds_until_end_of_day())
+
+    if count > MAX_DAILY_CALLS:
+        return False
+
+    return True

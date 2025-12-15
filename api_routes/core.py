@@ -9,7 +9,7 @@ from sources.schemas import QueryResponse
 from sources.logger import Logger
 from api_routes.models import QueryRequest, QuestionRequest
 from sources.knowledge.knowledge import get_knowledge_tool
-from sources.user.passport import verify_firebase_token
+from sources.user.passport import verify_firebase_token, check_and_increase_usage
 
 router = APIRouter()
 
@@ -44,9 +44,18 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
         return JSONResponse(status_code=404, content={"error": "No answer available"})
 
     @router.post("/query")
-    async def process_query(request: QueryRequest):
+    async def process_query(request: QueryRequest, http_request: Request):
         app_logger.info(f"Processing query: {request.query}")
         app_logger.info("Processing start begin")
+
+        auth_header = http_request.headers.get("Authorization")
+        user = verify_firebase_token(auth_header)
+
+        user_id = user['uid']
+
+        allowed = await check_and_increase_usage(user_id)
+        if not allowed:
+            return JSONResponse(status_code=429, content="Daily API usage limit exceeded (100/day)")
 
         # 如果没有提供 query_id，自动生成一个
         if not request.query_id:
@@ -69,7 +78,6 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
         try:
             # is_generating = True  # Uncomment if needed
-            user_id = 11111111
             # 调用 think_wrapper_func 来处理查询
             success = await think_wrapper_func(user_id, interaction_ref, request.query, request.query_id)
             
