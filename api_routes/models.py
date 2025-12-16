@@ -7,7 +7,6 @@ from sources.knowledge.knowledge import KnowledgeItem, ToolItem
 
 # Knowledge Models
 class KnowledgeCreateRequest(BaseModel):
-    userId: str
     question: str
     description: str
     answer: str
