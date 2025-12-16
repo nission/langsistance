@@ -821,7 +821,7 @@ async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
             if row["tool_id"]:
                 # 查询工具详情
                 tool_query_sql = """
-                    SELECT name as title, description, url, push, public, timeout, params, user_id
+                    SELECT title, description, url, push, public, timeout, params, user_id
                     FROM tools
                     WHERE id = %s AND status = 1
                 """
