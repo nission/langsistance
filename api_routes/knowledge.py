@@ -457,21 +457,6 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
         # 获取数据库连接
         connection = get_db_connection()
         with connection.cursor() as cursor:
-            # 检查用户是否存在，如果不存在则创建用户
-            check_user_sql = "SELECT id FROM users WHERE firebase_uid = %s"
-            cursor.execute(check_user_sql, (user_id,))
-            user_result = cursor.fetchone()
-
-            if not user_result:
-                # 用户不存在，创建新用户
-                insert_user_sql = """
-                              INSERT INTO users 
-                              (firebase_uid, email, is_active) 
-                              VALUES (%s, %s, %s)
-                          """
-                cursor.execute(insert_user_sql, (user_id, email, 1))
-                connection.commit()
-                logger.info(f"Created new user with id: {user_id} and email: {email}")
 
             # 构建查询条件
             # 1. 用户ID匹配
