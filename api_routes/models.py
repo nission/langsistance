@@ -62,7 +62,6 @@ class KnowledgeCopyResponse(BaseModel):
 # Tool Models
 class ToolAndKnowledgeCreateRequest(BaseModel):
     # Tool fields
-    tool_userId: str
     tool_title: str
     tool_description: str
     tool_url: str
@@ -71,7 +70,6 @@ class ToolAndKnowledgeCreateRequest(BaseModel):
     tool_timeout: int
     tool_params: str
     # Knowledge fields
-    knowledge_userId: str
     knowledge_question: str
     knowledge_description: str
     knowledge_answer: str
