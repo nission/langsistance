@@ -70,6 +70,21 @@ async def create_knowledge_record(request: KnowledgeCreateRequest, http_request:
         # 获取数据库连接
         connection = get_db_connection()
         with connection.cursor() as cursor:
+            # 验证tool_id是否属于当前用户
+            check_tool_sql = "SELECT id FROM tools WHERE id = %s AND user_id = %s AND status = 1"
+            cursor.execute(check_tool_sql, (request.toolId, user_id))
+            tool_result = cursor.fetchone()
+
+            if not tool_result:
+                logger.warning(f"Tool {request.toolId} not found or not owned by user {user_id}")
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "success": False,
+                        "message": "Tool not found or not owned by current user"
+                    }
+                )
+
             # 插入数据
             sql = """
                   INSERT INTO knowledge
@@ -130,6 +145,7 @@ async def create_knowledge_record(request: KnowledgeCreateRequest, http_request:
     finally:
         if connection:
             connection.close()
+
 
 @router.post("/delete_knowledge", response_model=KnowledgeDeleteResponse)
 async def delete_knowledge_record(request: KnowledgeDeleteRequest, http_request: Request):
