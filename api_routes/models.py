@@ -22,7 +22,6 @@ class KnowledgeCreateResponse(BaseModel):
     id: Optional[int] = None
 
 class KnowledgeDeleteRequest(BaseModel):
-    userId: str
     knowledgeId: int
 
 class KnowledgeDeleteResponse(BaseModel):
@@ -30,7 +29,6 @@ class KnowledgeDeleteResponse(BaseModel):
     message: str
 
 class KnowledgeUpdateRequest(BaseModel):
-    userId: str
     knowledgeId: int
     question: Optional[str] = None
     description: Optional[str] = None
@@ -51,7 +49,6 @@ class KnowledgeQueryResponse(BaseModel):
     total: int
 
 class KnowledgeCopyRequest(BaseModel):
-    userId: str
     knowledgeId: int
 
 class KnowledgeCopyResponse(BaseModel):
@@ -85,7 +82,6 @@ class ToolAndKnowledgeCreateResponse(BaseModel):
     knowledge_id: Optional[int] = None
 
 class ToolUpdateRequest(BaseModel):
-    userId: str
     toolId: int
     title: Optional[str] = None
     description: Optional[str] = None
@@ -96,7 +92,6 @@ class ToolUpdateResponse(BaseModel):
     message: str
 
 class ToolDeleteRequest(BaseModel):
-    userId: str
     toolId: int
 
 class ToolDeleteResponse(BaseModel):
@@ -125,7 +120,6 @@ class KnowledgeToolResponse(BaseModel):
 
 class ToolFetchRequest(BaseModel):
     query_id: str
-    userId: str
 
 class ToolFetchResponse(BaseModel):
     success: bool
@@ -134,7 +128,6 @@ class ToolFetchResponse(BaseModel):
 
 class ToolResponseRequest(BaseModel):
     query_id: str
-    userId: str
     tool_response: dict
 
 class ToolResponseResponse(BaseModel):
