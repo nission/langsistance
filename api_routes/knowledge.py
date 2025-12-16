@@ -1282,6 +1282,7 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                 knowledge_id = share["knowledge_id"]
                 if knowledge_id in knowledge_map:
                     knowledge_data = knowledge_map[knowledge_id]
+                    knowledge_item = []
                     knowledge_item[share["id"]] = KnowledgeItem(
                         id=knowledge_data["id"],
                         user_id=user_id,
