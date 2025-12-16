@@ -17,7 +17,7 @@ redis_client = get_redis_connection()  # 根据实际情况调整配置
 # 白名单配置 - 字典形式
 WHITELIST_TOKENS = {
     "Bearer whitelist_token_1": {
-        'uid': 12957524084372015683,
+        'uid': '12957524084372015683',
         'email': 'gray.yuehui@gmail.com'
     },
     # 可以添加更多白名单项

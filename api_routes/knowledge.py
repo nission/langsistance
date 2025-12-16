@@ -33,7 +33,7 @@ async def create_knowledge_record(request: KnowledgeCreateRequest, http_request:
     # 参数校验
     errors = []
 
-    if not user_id or user_id > 0:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if not request.question or len(request.question) > 100:
@@ -146,7 +146,7 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest, http_request:
     # 参数校验
     errors = []
 
-    if not user_id or user_id > 0:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if not request.knowledgeId:
@@ -252,7 +252,7 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest, http_request:
     # 参数校验
     errors = []
 
-    if not user_id or user_id > 0:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if not request.knowledgeId:
@@ -424,13 +424,13 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
     auth_header = http_request.headers.get("Authorization")
     user = verify_firebase_token(auth_header)
 
-    user_id = user.get("uid")
-    email = user.get("email")  # 获取用户邮箱
+    user_id = user['uid']
+    email = user['email']
 
     # 参数校验
     errors = []
 
-    if not user_id or user_id > 0:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if limit <= 0 or limit > 100:
@@ -765,14 +765,14 @@ async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
     auth_header = http_request.headers.get("Authorization")
     user = verify_firebase_token(auth_header)
 
-    user_id = user.get('uid')
+    user_id = user['uid']
 
     logger.info(f"Copy knowledge record for user: {user_id}")
 
     # 参数校验
     errors = []
 
-    if not user_id or user_id > 0:
+    if not user_id or len(user_id) > 50:
         errors.append("userId is required and must be no more than 50 characters")
 
     if not request.knowledgeId:
@@ -897,7 +897,7 @@ async def authorize_knowledge_access(request: Request, auth_request: dict):
     auth_header = request.headers.get("Authorization")
     user = verify_firebase_token(auth_header)
 
-    user_id = user.get("uid")
+    user_id = user['uid']
     target_email = auth_request.get("email")
     knowledge_id = auth_request.get("knowledgeId")
 
@@ -1034,8 +1034,7 @@ async def handle_knowledge_share(request: Request, handle_request: dict):
     auth_header = request.headers.get("Authorization")
     user = verify_firebase_token(auth_header)
 
-    user_id = user.get("uid")
-    email = user.get("email")
+    user_id = user['uid']
     knowledge_share_id = handle_request.get("share_id")
     action = handle_request.get("action")  # "accept" 或 "reject"
 
@@ -1206,14 +1205,14 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
     auth_header = http_request.headers.get("Authorization")
     user = verify_firebase_token(auth_header)
 
-    user_id = user.get("uid")
-    email = user.get("email")
+    user_id = user['uid']
+    email = user['email']
 
     # 参数校验
     errors = []
 
-    if not user_id or user_id > 0:
-        errors.append("userId is required and must be no more than 50 characters")
+    if not user_id or len(user_id) > 50:
+        errors.append("userId is required")
 
     if limit <= 0 or limit > 100:
         errors.append("limit must be between 1 and 100")
