@@ -1312,7 +1312,7 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                 content={
                     "success": True,
                     "message": "Knowledge shares retrieved successfully",
-                    "data": [item.dict() for item in knowledge_items],
+                    "data": {key: item.dict() for key, item in knowledge_items.items()},
                     "total": total
                 }
             )
