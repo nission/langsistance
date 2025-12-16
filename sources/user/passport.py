@@ -122,7 +122,7 @@ async def check_and_increase_usage(user_id: int) -> bool:
     返回 False：超过当日限制
     """
     today = datetime.utcnow().strftime("%Y%m%d")
-    key = f"api_usage:{user_id}:{today}"
+    key = f"api_usage_{user_id}_{today}"
 
     count = await redis_client.incr(key)
 
