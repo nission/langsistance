@@ -105,7 +105,6 @@ class ToolQueryResponse(BaseModel):
 
 # Query Models
 class QuestionRequest(BaseModel):
-    userId: str
     question: str
     top_k: Optional[int] = 3
     similarity_threshold: Optional[float] = 0.7
