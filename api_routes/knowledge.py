@@ -336,7 +336,7 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest, http_request:
                 update_fields.append("public = " + str(request.public))
 
             if request.modelName is not None:
-                update_fields.append("modelName = '" + request.modelName + "'")
+                update_fields.append("model_name = '" + request.modelName + "'")
 
             if request.toolId is not None:
                 update_fields.append("tool_id = " + str(request.toolId))
