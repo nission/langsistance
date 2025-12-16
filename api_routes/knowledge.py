@@ -1124,7 +1124,7 @@ async def handle_knowledge_share(request: Request, handle_request: dict):
                 if knowledge_result['tool_id']:
                     # 查询工具详情
                     tool_query_sql = """
-                        SELECT name as title, description, url, push, public, timeout, params, user_id
+                        SELECT title, description, url, push, public, timeout, params, user_id
                         FROM tools
                         WHERE id = %s AND status = 1
                     """
@@ -1282,9 +1282,9 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                 knowledge_id = share["knowledge_id"]
                 if knowledge_id in knowledge_map:
                     knowledge_data = knowledge_map[knowledge_id]
-                    knowledge_item = KnowledgeItem(
+                    knowledge_item[share["id"]] = KnowledgeItem(
                         id=knowledge_data["id"],
-                        user_id=str(knowledge_data["user_id"]),
+                        user_id=user_id,
                         question=knowledge_data["question"],
                         description=knowledge_data["description"],
                         answer=knowledge_data["answer"],
@@ -1293,9 +1293,6 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                         tool_id=knowledge_data["tool_id"] or 0,
                         params=knowledge_data["params"] or ""
                     )
-                    # 添加额外的分享相关信息
-                    knowledge_item.share_id = share["id"]
-                    knowledge_item.from_user_id = str(share["from_user_id"])
 
                     # 处理时间字段
                     if knowledge_data["create_time"]:
