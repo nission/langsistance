@@ -1277,12 +1277,12 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                 knowledge_map = {}
 
             # 组装返回数据
-            knowledge_items = []
+            knowledge_items = {}
             for share in share_results:
                 knowledge_id = share["knowledge_id"]
                 if knowledge_id in knowledge_map:
                     knowledge_data = knowledge_map[knowledge_id]
-                    knowledge_item = {share["id"]: KnowledgeItem(
+                    knowledge_item = KnowledgeItem(
                         id=knowledge_data["id"],
                         user_id=user_id,
                         question=knowledge_data["question"],
@@ -1292,7 +1292,7 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                         model_name=knowledge_data["model_name"] or "",
                         tool_id=knowledge_data["tool_id"] or 0,
                         params=knowledge_data["params"] or ""
-                    )}
+                    )
 
                     # 处理时间字段
                     if knowledge_data["create_time"]:
@@ -1304,7 +1304,7 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                             if hasattr(knowledge_data["update_time"], "isoformat") else str(
                             knowledge_data["update_time"])
 
-                    knowledge_items.append(knowledge_item)
+                    knowledge_items[share["id"]] = knowledge_item
 
             logger.info(f"Found {len(knowledge_items)} knowledge shares for user: {email}")
             return JSONResponse(
