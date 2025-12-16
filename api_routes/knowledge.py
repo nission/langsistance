@@ -1046,7 +1046,7 @@ async def handle_knowledge_share(request: Request, handle_request: dict):
                 "errors": errors
             }
         )
-    logger.info(f"Handling knowledge share request for user {email}")
+
     connection = None
     try:
         # 获取数据库连接
@@ -1072,7 +1072,7 @@ async def handle_knowledge_share(request: Request, handle_request: dict):
                 )
 
             knowledge_id = share_result["knowledge_id"]
-            logger.info(f"Handling knowledge share {knowledge_share_id} and action is {action}")
+
             if action == "reject":
                 # 拒绝分享，更新状态为已处理
                 update_share_sql = "UPDATE knowledge_share SET status = 2 WHERE id = %s"
@@ -1106,7 +1106,7 @@ async def handle_knowledge_share(request: Request, handle_request: dict):
                             "message": "Knowledge record not found or inactive"
                         }
                     )
-                logger.info(f"User {user_id} accepted knowledge share {knowledge_share_id}")
+
                 # 准备知识数据
                 knowledge_data = {
                     'user_id': user_id,  # 新的所有者
@@ -1118,7 +1118,7 @@ async def handle_knowledge_share(request: Request, handle_request: dict):
                     'model_name': knowledge_result['model_name'],
                     'params': knowledge_result['params']
                 }
-                logger.info(f"tool id:{knowledge_result['tool_id']}")
+
                 # 准备工具数据（如果存在）
                 tool_data = None
                 if knowledge_result['tool_id']:
