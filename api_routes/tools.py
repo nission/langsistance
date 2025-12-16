@@ -224,7 +224,7 @@ async def update_tool(request: ToolUpdateRequest,  http_request:  Request):
                 update_fields.append("description = '" + request.description + "'")
 
             if request.public is not None:
-                update_fields.append("public = " + str(request.public))
+                update_fields.append("public = " + request.public)
 
             # 如果没有任何字段需要更新
             if not update_fields:
