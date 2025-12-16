@@ -1035,6 +1035,7 @@ async def handle_knowledge_share(request: Request, handle_request: dict):
     user = verify_firebase_token(auth_header)
 
     user_id = user['uid']
+    email = user['email']
     knowledge_share_id = handle_request.get("share_id")
     action = handle_request.get("action")  # "accept" 或 "reject"
 
