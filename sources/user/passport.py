@@ -4,6 +4,9 @@ from fastapi import HTTPException
 from sources.knowledge.knowledge import get_db_connection, get_redis_connection, create_tool_and_knowledge_records
 import random
 from datetime import datetime, timedelta, timezone
+from sources.logger import Logger
+
+logger = Logger("passport.log")
 
 cred = credentials.Certificate("firebase_service_key.json")
 firebase_admin.initialize_app(cred)
@@ -25,6 +28,7 @@ WHITELIST_TOKENS = {
 }
 
 def verify_firebase_token(auth_header: str):
+    logger.info(f"verify firebase token auther header: {auth_header}")
     # 检查是否为白名单请求
     if auth_header in WHITELIST_TOKENS:
         return WHITELIST_TOKENS[auth_header]
@@ -33,7 +37,7 @@ def verify_firebase_token(auth_header: str):
         raise HTTPException(status_code=401, detail="Missing token")
 
     id_token = auth_header.split("Bearer ")[1]
-
+    logger.info(f"verify firebase token id token: {id_token}")
     try:
         decoded_token = auth.verify_id_token(id_token)
         firebase_uid = decoded_token['uid']
