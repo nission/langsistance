@@ -483,7 +483,6 @@ class AgentRouter:
         
         try:
             # 获取用户ID，这里假设使用默认用户ID，您可能需要根据实际情况修改
-            user_id = "111111111"
 
             # 如果没有找到匹配的知识，则使用默认的选择方法
             pretty_print("No matching knowledge found, using default agent selection.", color="warning")

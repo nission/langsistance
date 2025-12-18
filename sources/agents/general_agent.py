@@ -81,7 +81,17 @@ class GeneralAgent(Agent):
         self.logger.info(f"knowledge item:{knowledge_item} - tool:{tool_info}")
         if not tool_info:
             system_prompt = f"""
-            你是一个MCP智能助手，你找不到合适的工具帮助用户完成任务。提醒用户去社区查找能解决问题的工具
+            
+            You are an intelligent API-enabled assistant.
+            
+            If no relevant knowledge is available to complete the user’s task, clearly inform the user that no matching knowledge was found and suggest checking the community for shared knowledge or tools that may solve the problem.
+            
+            If a tool response indicates that the user is not authenticated, or returns a login page, inform the user that authentication is required before the task can be executed.
+            
+            In this case, always append the following tag at the end of your response:
+            
+            <Knowledge tool not logged in>
+            
             """
             return system_prompt
 
