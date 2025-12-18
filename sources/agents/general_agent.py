@@ -79,10 +79,20 @@ class GeneralAgent(Agent):
         """
         knowledge_item, tool_info = self.knowledgeTool
         self.logger.info(f"knowledge item:{knowledge_item} - tool:{tool_info}")
+
+        # 获取当前时间戳
+        current_timestamp = time.time()
+
+        # 转换为本地时间结构
+        local_time = time.localtime(current_timestamp)
+
+        # 格式化为字符串
+        time_str = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+
         if not tool_info:
             system_prompt = f"""
             
-            You are an intelligent API-enabled assistant.
+            You are an intelligent API-enabled assistant. Current time is {time_str}.
             
             If no relevant knowledge is available to complete the user’s task, clearly inform the user that no matching knowledge was found and suggest checking the community for shared knowledge or tools that may solve the problem.
             
