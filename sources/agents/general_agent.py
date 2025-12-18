@@ -129,14 +129,21 @@ class GeneralAgent(Agent):
                 tool_params_info = f"工具参数: {tool_info.params}"
 
         system_prompt = f"""
-        你是一个MCP智能助手，你的任务是根据用户的问题和上下文，使用MCP服务器提供的工具来解决问题。
-        你需要使用的MCP工具是：
-        {tool_title}
-        功能是：
-        {tool_description}
-        {tool_params_info}
-        工具调用完成后基于结果给出最终答案。
-        如果不需要使用工具，请直接回答用户的问题。
+        You are an intelligent assistant capable of deciding when and how to use APIs to complete tasks.
+
+        Based on the user’s request and the available context, decide whether invoking a tool is necessary.
+
+        If a tool is required, use the following tool:
+
+        Tool: {tool_title}
+        Purpose: {tool_description}
+        Input parameters: {tool_params_info}
+
+        Execute the tool with the appropriate parameters and generate the final response strictly based on the tool’s output.
+
+        If the task can be completed without invoking the tool, respond directly to the user without calling any tool.
+
+        Do not fabricate tool results. Do not assume tool behavior beyond the provided output.
         """
         # return self.expand_prompt(system_prompt)
         return system_prompt
