@@ -1347,3 +1347,159 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
     finally:
         if connection:
             connection.close()
+
+@router.get("/get_user_shared_knowledge", response_model=KnowledgeQueryResponse)
+async def get_user_shared_knowledge(http_request: Request, limit: int = 10, offset: int = 0):
+    """
+    根据分享人查询知识分享记录
+    """
+    # 验证用户登录态
+    auth_header = http_request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
+    # 参数校验
+    errors = []
+
+    if not user_id or len(user_id) > 50:
+        errors.append("userId is required")
+
+    if limit <= 0 or limit > 100:
+        errors.append("limit must be between 1 and 100")
+
+    if offset < 0:
+        errors.append("offset must be greater than or equal to 0")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors,
+                "data": [],
+                "total": 0
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 先查询knowledge_share表获取分享记录总数
+            count_sql = """
+                SELECT COUNT(*) as total
+                FROM knowledge_share 
+                WHERE from_user_id = %s
+            """
+            cursor.execute(count_sql, (user_id,))
+            count_result = cursor.fetchone()
+            total = count_result['total'] if count_result else 0
+
+            if total == 0:
+                logger.info(f"No knowledge shares found from user: {user_id}")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "No shares found",
+                        "data": [],
+                        "total": 0
+                    }
+                )
+
+            # 查询knowledge_share表获取分享记录
+            share_query_sql = """
+                SELECT id, knowledge_id, to_user_email, create_time, update_time
+                FROM knowledge_share 
+                WHERE from_user_id = %s
+                ORDER BY create_time DESC
+                LIMIT %s OFFSET %s
+            """
+            cursor.execute(share_query_sql, (user_id, limit, offset))
+            share_results = cursor.fetchall()
+
+            # 收集所有knowledge_id用于查询知识详情
+            knowledge_ids = [str(share["knowledge_id"]) for share in share_results]
+
+            # 根据knowledge_ids查询knowledge表
+            if knowledge_ids:
+                knowledge_query_sql = f"""
+                    SELECT id, user_id, question, description, answer, public, 
+                           model_name, tool_id, params, create_time, update_time
+                    FROM knowledge
+                    WHERE id IN ({','.join(['%s'] * len(knowledge_ids))})
+                """
+                cursor.execute(knowledge_query_sql, knowledge_ids)
+                knowledge_results = cursor.fetchall()
+
+                # 创建knowledge_id到knowledge记录的映射
+                knowledge_map = {k["id"]: k for k in knowledge_results}
+            else:
+                knowledge_map = {}
+
+            # 组装返回数据
+            knowledge_items = []
+            for share in share_results:
+                knowledge_id = share["knowledge_id"]
+                if knowledge_id in knowledge_map:
+                    knowledge_data = knowledge_map[knowledge_id]
+                    knowledge_item = KnowledgeItem(
+                        id=knowledge_data["id"],
+                        user_id=str(knowledge_data["user_id"]),
+                        question=knowledge_data["question"],
+                        description=knowledge_data["description"],
+                        answer=knowledge_data["answer"],
+                        public=knowledge_data["public"],
+                        model_name=knowledge_data["model_name"] or "",
+                        tool_id=knowledge_data["tool_id"] or 0,
+                        params=knowledge_data["params"] or "",
+                        extra_info={
+                            "share_id": share["id"],
+                            "to_user_email": share["to_user_email"],
+                            "share_create_time": share["create_time"].isoformat() if hasattr(share["create_time"], "isoformat") else str(share["create_time"]),
+                            "share_update_time": share["update_time"].isoformat() if hasattr(share["update_time"], "isoformat") else str(share["update_time"])
+                        }
+                    )
+
+                    # 处理时间字段
+                    if knowledge_data["create_time"]:
+                        knowledge_item.create_time = knowledge_data["create_time"].isoformat() \
+                            if hasattr(knowledge_data["create_time"], "isoformat") else str(
+                            knowledge_data["create_time"])
+                    if knowledge_data["update_time"]:
+                        knowledge_item.update_time = knowledge_data["update_time"].isoformat() \
+                            if hasattr(knowledge_data["update_time"], "isoformat") else str(
+                            knowledge_data["update_time"])
+
+                    knowledge_items.append(knowledge_item)
+
+            logger.info(f"Found {len(knowledge_items)} knowledge shares from user: {user_id}")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Knowledge shares retrieved successfully",
+                    "data": [item.dict() for item in knowledge_items],
+                    "total": total
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error querying knowledge shares by from_user: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}",
+                "data": [],
+                "total": 0
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
+
