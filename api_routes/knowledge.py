@@ -340,25 +340,32 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest, http_request:
             update_params = []
 
             if request.question is not None:
-                update_fields.append("question = '" + request.question + "'")
+                update_fields.append("question = %s")
+                update_params.append(request.question)
 
             if request.description is not None:
-                update_fields.append("description = '" + request.description + "'")
+                update_fields.append("description = %s")
+                update_params.append(request.description)
 
             if request.answer is not None:
-                update_fields.append("answer = '" + request.answer + "'")
+                update_fields.append("answer = %s")
+                update_params.append(request.answer)
 
             if request.public is not None:
-                update_fields.append("public = " + str(request.public))
+                update_fields.append("public = %s")
+                update_params.append(request.public)
 
             if request.modelName is not None:
-                update_fields.append("model_name = '" + request.modelName + "'")
+                update_fields.append("model_name = %s")
+                update_params.append(request.modelName)
 
             if request.toolId is not None:
-                update_fields.append("tool_id = " + str(request.toolId))
+                update_fields.append("tool_id = %s")
+                update_params.append(request.toolId)
 
             if request.params is not None:
-                update_fields.append("params = '" + request.params + "'")
+                update_fields.append("params = %s")
+                update_params.append(request.params)
 
             # 如果没有任何字段需要更新
             if not update_fields:

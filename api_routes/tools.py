@@ -218,13 +218,16 @@ async def update_tool(request: ToolUpdateRequest,  http_request:  Request):
             update_params = []
 
             if request.title is not None:
-                update_fields.append("title = '" + request.title + "'")
+                update_fields.append("title = %s")
+                update_params.append(request.title)
 
             if request.description is not None:
-                update_fields.append("description = '" + request.description + "'")
+                update_fields.append("description = %s")
+                update_params.append(request.description)
 
             if request.public is not None:
-                update_fields.append("public = " + str(request.public))
+                update_fields.append("public = %s")
+                update_params.append(request.public)
 
             # 如果没有任何字段需要更新
             if not update_fields:
