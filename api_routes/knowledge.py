@@ -555,6 +555,7 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
 
             # 转换为KnowledgeItem对象列表
             knowledge_items = []
+            tool_ids = set()  # 收集所有相关的tool_id
             for row in results:
                 knowledge_item = KnowledgeItem(
                     id=row['id'],
@@ -570,22 +571,41 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
                 # 处理时间字段
                 if row['create_time']:
                     knowledge_item.create_time = row['create_time'].isoformat() if hasattr(row['create_time'],
-                                                                                         'isoformat') else str(
+                                                                                           'isoformat') else str(
                         row['create_time'])
                 if row['update_time']:
                     knowledge_item.update_time = row['update_time'].isoformat() if hasattr(row['update_time'],
-                                                                                         'isoformat') else str(
+                                                                                           'isoformat') else str(
                         row['update_time'])
 
                 knowledge_items.append(knowledge_item)
 
+                # 收集工具ID用于后续查询
+                if row['tool_id']:
+                    tool_ids.add(row['tool_id'])
+
+            # 查询对应的工具记录
+            tool_items = []
+            if tool_ids:
+                # 从 knowledge 模块导入 get_tool_by_id 方法
+                from sources.knowledge.knowledge import get_tool_by_id
+
+                for tool_id in tool_ids:
+                    tool_item = get_tool_by_id(tool_id)
+                    if tool_item:
+                        tool_items.append(tool_item)
+
+            combined_data = {
+                "knowledge": [item.dict() for item in knowledge_items],
+                "tools": [item.dict() for item in tool_items]
+            }
             # logger.info(f"Found {len(knowledge_items)} knowledge records for user: {userId} with query: {query}")
             return JSONResponse(
                 status_code=200,
                 content={
                     "success": True,
                     "message": "Knowledge records retrieved successfully",
-                    "data": [item.dict() for item in knowledge_items],
+                    "data": combined_data,
                     "total": total
                 }
             )

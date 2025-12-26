@@ -511,3 +511,54 @@ def create_tool_and_knowledge_records(tool_data: dict, knowledge_data: dict) -> 
     finally:
         if connection:
             connection.close()
+
+
+def get_tool_by_id(tool_id: int) -> Optional[ToolItem]:
+    """
+    根据tool_id查询数据库tools表
+
+    Args:
+        tool_id (int): 工具ID
+
+    Returns:
+        Optional[ToolItem]: ToolItem对象，如果未找到则返回None
+    """
+    try:
+        connection = get_db_connection()
+
+        try:
+            with connection.cursor() as cursor:
+                # 查询工具信息
+                tool_query_sql = """
+                    SELECT id, user_id, title, description, url, push, public, status, timeout, params, create_time, update_time
+                    FROM tools
+                    WHERE id = %s AND status = 1
+                """
+                cursor.execute(tool_query_sql, (tool_id,))
+                tool_result = cursor.fetchone()
+
+                if tool_result:
+                    # 构建ToolItem对象
+                    tool_item = ToolItem(
+                        id=tool_result['id'],
+                        user_id=str(tool_result['user_id']),
+                        title=tool_result['title'],
+                        description=tool_result['description'],
+                        url=tool_result['url'],
+                        push=tool_result['push'],
+                        public=tool_result['public'],
+                        status=tool_result['status'],
+                        timeout=tool_result['timeout'],
+                        params=tool_result['params']
+                    )
+                    logger.info(f"Retrieved tool info for tool ID: {tool_id}")
+                    return tool_item
+                else:
+                    logger.warning(f"No tool found for tool ID: {tool_id}")
+                    return None
+        finally:
+            connection.close()
+
+    except Exception as e:
+        logger.error(f"Error retrieving tool by ID: {str(e)}")
+        return None

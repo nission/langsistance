@@ -15,7 +15,7 @@ from .models import (
     ToolResponseRequest, ToolResponseResponse,
     OpenAPISpecRequest, OpenAPISpecResponse
 )
-from sources.knowledge.knowledge import get_db_connection, get_redis_connection, create_tool_and_knowledge_records
+from sources.knowledge.knowledge import get_db_connection, get_redis_connection, create_tool_and_knowledge_records, get_tool_by_id
 from sources.logger import Logger
 from sources.user.passport import verify_firebase_token
 
@@ -924,85 +924,57 @@ async def query_tool_by_id(http_request: Request, tool_id: int):
             }
         )
 
-    connection = None
     try:
-        # 获取数据库连接
-        connection = get_db_connection()
-        with connection.cursor() as cursor:
-            # 查询指定ID且状态为有效的工具
-            query_sql = """
-                        SELECT id, \
-                               user_id, \
-                               title, \
-                               description, \
-                               url, push, public, status, timeout, params, create_time, update_time
-                        FROM tools
-                        WHERE id = %s AND status = %s
-                        """
-            cursor.execute(query_sql, (tool_id, 1))
-            result = cursor.fetchone()
+        # 使用 knowledge.py 中的 get_tool_by_id 方法查询工具
+        tool_item = get_tool_by_id(tool_id)
 
-            if not result:
-                logger.info(f"No tool found with id: {tool_id}")
+        if not tool_item:
+            logger.info(f"No tool found with id: {tool_id}")
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "success": False,
+                    "message": "Tool not found"
+                }
+            )
+
+        # 检查工具访问权限
+        tool_public = tool_item.public
+        tool_owner_id = tool_item.user_id
+
+        # 如果工具不是公开的
+        if tool_public != 1:
+            # 用户未登录，无法访问私有工具
+            if not user_authenticated:
+                logger.warning(f"Unauthorized access to private tool {tool_id} by unauthenticated user")
                 return JSONResponse(
-                    status_code=404,
+                    status_code=403,
                     content={
                         "success": False,
-                        "message": "Tool not found"
+                        "message": "Access denied. This is a private tool."
                     }
                 )
 
-            # 检查工具访问权限
-            tool_public = result['public']
-            tool_owner_id = str(result['user_id'])
+            # 用户已登录，但不是工具所有者
+            if user_id != tool_owner_id:
+                logger.warning(f"Unauthorized access to private tool {tool_id} by user {user_id}")
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "success": False,
+                        "message": "Access denied. This is a private tool."
+                    }
+                )
 
-            # 如果工具不是公开的
-            if tool_public != 1:
-                # 用户未登录，无法访问私有工具
-                if not user_authenticated:
-                    logger.warning(f"Unauthorized access to private tool {tool_id} by unauthenticated user")
-                    return JSONResponse(
-                        status_code=403,
-                        content={
-                            "success": False,
-                            "message": "Access denied. This is a private tool."
-                        }
-                    )
-
-                # 用户已登录，但不是工具所有者
-                if user_id != tool_owner_id:
-                    logger.warning(f"Unauthorized access to private tool {tool_id} by user {user_id}")
-                    return JSONResponse(
-                        status_code=403,
-                        content={
-                            "success": False,
-                            "message": "Access denied. This is a private tool."
-                        }
-                    )
-
-            # 转换为ToolItem对象
-            tool_item = ToolItem(
-                id=result['id'],
-                user_id=tool_owner_id,
-                title=result['title'],
-                description=result['description'],
-                url=result['url'],
-                push=result['push'],
-                public=result['public'],
-                status=result['status'],
-                timeout=result['timeout'],
-                params=result['params']
-            )
-
-            logger.info(f"Tool found with id: {tool_id}")
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "success": True,
-                    "message": "Tool retrieved successfully",
-                    "data": tool_item.dict()
-                }
-            )
+        logger.info(f"Tool found with id: {tool_id}")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "success": True,
+                "message": "Tool retrieved successfully",
+                "data": tool_item.dict()
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error querying tool by id: {str(e)}")
@@ -1013,10 +985,6 @@ async def query_tool_by_id(http_request: Request, tool_id: int):
                 "message": f"Internal server error: {str(e)}"
             }
         )
-    finally:
-        if connection:
-            connection.close()
-
 
 @router.post("/create_tool_from_openapi", response_model=OpenAPISpecResponse)
 async def create_tool_from_openapi(request: OpenAPISpecRequest, http_request: Request):
