@@ -11,7 +11,7 @@ from .models import (
     KnowledgeQueryResponse, KnowledgeItem,
     KnowledgeCopyRequest, KnowledgeCopyResponse
 )
-from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection, create_tool_and_knowledge_records
+from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection, create_tool_and_knowledge_records, get_tool_by_id
 from sources.logger import Logger
 from sources.user.passport import verify_firebase_token
 
@@ -587,8 +587,6 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
             # 查询对应的工具记录
             tool_items = []
             if tool_ids:
-                # 从 knowledge 模块导入 get_tool_by_id 方法
-                from sources.knowledge.knowledge import get_tool_by_id
 
                 for tool_id in tool_ids:
                     tool_item = get_tool_by_id(tool_id)
