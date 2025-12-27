@@ -10,7 +10,7 @@ class KnowledgeCreateRequest(BaseModel):
     question: str
     description: str
     answer: str
-    public: bool
+    public: int
     modelName: str
     toolId: int
     params: str
@@ -32,7 +32,7 @@ class KnowledgeUpdateRequest(BaseModel):
     question: Optional[str] = None
     description: Optional[str] = None
     answer: Optional[str] = None
-    public: Optional[bool] = None
+    public: Optional[int] = None
     modelName: Optional[str] = None
     toolId: Optional[int] = None
     params: Optional[str] = None
@@ -62,14 +62,14 @@ class ToolAndKnowledgeCreateRequest(BaseModel):
     tool_description: str
     tool_url: str
     tool_push: int
-    tool_public: bool
+    tool_public: int
     tool_timeout: int
     tool_params: str
     # Knowledge fields
     knowledge_question: str
     knowledge_description: str
     knowledge_answer: str
-    knowledge_public: bool
+    knowledge_public: int
     knowledge_embeddingId: int
     knowledge_model_name: str
     knowledge_params: str
