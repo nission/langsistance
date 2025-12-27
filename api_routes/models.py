@@ -8,12 +8,12 @@ from sources.knowledge.knowledge import KnowledgeItem, ToolItem
 # Knowledge Models
 class KnowledgeCreateRequest(BaseModel):
     question: str
-    description: str
     answer: str
     public: int
     toolId: int
     params: str
     modelName: Optional[str] = None
+    description: Optional[str] = None
 
 class KnowledgeCreateResponse(BaseModel):
     success: bool
