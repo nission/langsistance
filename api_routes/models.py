@@ -11,9 +11,9 @@ class KnowledgeCreateRequest(BaseModel):
     description: str
     answer: str
     public: int
-    modelName: str
     toolId: int
     params: str
+    modelName: Optional[str] = None
 
 class KnowledgeCreateResponse(BaseModel):
     success: bool
