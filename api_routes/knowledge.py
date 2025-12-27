@@ -39,13 +39,13 @@ async def create_knowledge_record(request: KnowledgeCreateRequest, http_request:
     if not request.question or len(request.question) > 100:
         errors.append("question is required and must be no more than 100 characters")
 
-    if not request.description or len(request.description) > 5000:
+    if request.description and len(request.description) > 5000:
         errors.append("description is required and must be no more than 5000 characters")
 
     if not request.answer or len(request.answer) > 5000:
         errors.append("answer is required and must be no more than 5000 characters")
 
-    if len(request.modelName) > 200:
+    if request.modelName and len(request.modelName) > 200:
         errors.append("modelName must be no more than 200 characters")
 
     if len(request.params) > 5000:
