@@ -1534,3 +1534,101 @@ async def get_user_shared_knowledge(http_request: Request, limit: int = 10, offs
         if connection:
             connection.close()
 
+@router.post("/cancel_knowledge_share")
+async def cancel_knowledge_share(request: Request, cancel_request: dict):
+    """
+    取消知识分享接口
+    根据登录用户的user_id和share_id查询knowledge_share表的from_user_id和id，
+    如果存在记录将status的状态改成4
+    """
+    # 验证用户登录态
+    auth_header = request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+    share_id = cancel_request.get("share_id")
+
+    # 参数校验
+    errors = []
+
+    if not user_id:
+        errors.append("User authentication failed")
+
+    if not share_id:
+        errors.append("shareId is required")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 查询分享记录，验证from_user_id是否为当前用户
+            check_share_sql = """
+                SELECT id, from_user_id, status
+                FROM knowledge_share
+                WHERE id = %s AND from_user_id = %s
+            """
+            cursor.execute(check_share_sql, (share_id, user_id))
+            share_result = cursor.fetchone()
+
+            if not share_result:
+                logger.warning(f"Knowledge share record {share_id} not found or not owned by user {user_id}")
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "message": "Share record not found or not owned by current user"
+                    }
+                )
+
+            # 检查当前状态，避免重复取消
+            current_status = share_result["status"]
+            if current_status == 4:
+                logger.info(f"Knowledge share {share_id} is already canceled")
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "success": True,
+                        "message": "Share record is already canceled"
+                    }
+                )
+
+            # 更新分享记录状态为4（已取消）
+            update_share_sql = "UPDATE knowledge_share SET status = 4 WHERE id = %s"
+            cursor.execute(update_share_sql, (share_id,))
+            connection.commit()
+
+            logger.info(f"User {user_id} canceled knowledge share {share_id}")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Knowledge share canceled successfully"
+                }
+            )
+
+    except Exception as e:
+        logger.error(f"Error canceling knowledge share: {str(e)}")
+        if connection:
+            connection.rollback()
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
+    finally:
+        if connection:
+            connection.close()
