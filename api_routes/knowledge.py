@@ -1290,7 +1290,7 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
 
             # 查询knowledge_share表获取分享记录
             share_query_sql = """
-                SELECT id, knowledge_id, from_user_id, from_user_email, status, create_time, update_time
+                SELECT id, knowledge_id, from_user_id, from_user_email, to_user_email, status, create_time, update_time
                 FROM knowledge_share 
                 WHERE to_user_email = %s AND status = 1
                 ORDER BY create_time DESC
