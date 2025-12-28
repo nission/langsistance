@@ -924,6 +924,7 @@ async def authorize_knowledge_access(request: Request, auth_request: dict):
     user = verify_firebase_token(auth_header)
 
     user_id = user['uid']
+    email = user['email']
     target_email = auth_request.get("email")
     knowledge_id = auth_request.get("knowledgeId")
 
@@ -1020,10 +1021,10 @@ async def authorize_knowledge_access(request: Request, auth_request: dict):
             # 插入授权记录，使用目标用户的user_id
             insert_auth_sql = """
                 INSERT INTO knowledge_share
-                (to_user_email, knowledge_id, from_user_id, status) 
+                (to_user_email, knowledge_id, from_user_id, from_user_email, status) 
                 VALUES (%s, %s, %s, %s)
             """
-            cursor.execute(insert_auth_sql, (target_email, knowledge_id, user_id, 1))
+            cursor.execute(insert_auth_sql, (target_email, knowledge_id, user_id, email, 1))
             connection.commit()
 
             logger.info(
@@ -1193,7 +1194,7 @@ async def handle_knowledge_share(request: Request, handle_request: dict):
                 new_knowledge_id = result["knowledge_id"]
 
                 # 更新分享记录状态为已处理
-                update_share_sql = "UPDATE knowledge_share SET status = 2 WHERE id = %s"
+                update_share_sql = "UPDATE knowledge_share SET status = 3 WHERE id = %s"
                 cursor.execute(update_share_sql, (knowledge_share_id,))
                 connection.commit()
 
@@ -1438,7 +1439,7 @@ async def get_user_shared_knowledge(http_request: Request, limit: int = 10, offs
 
             # 查询knowledge_share表获取分享记录
             share_query_sql = """
-                SELECT id, knowledge_id, to_user_email, create_time, update_time
+                SELECT id, knowledge_id, to_user_email, status, create_time, update_time
                 FROM knowledge_share 
                 WHERE from_user_id = %s
                 ORDER BY create_time DESC
@@ -1484,6 +1485,7 @@ async def get_user_shared_knowledge(http_request: Request, limit: int = 10, offs
                         params=knowledge_data["params"] or "",
                         extra_info={
                             "share_id": share["id"],
+                            "status": share["status"],
                             "to_user_email": share["to_user_email"],
                             "share_create_time": share["create_time"].isoformat() if hasattr(share["create_time"], "isoformat") else str(share["create_time"]),
                             "share_update_time": share["update_time"].isoformat() if hasattr(share["update_time"], "isoformat") else str(share["update_time"])
