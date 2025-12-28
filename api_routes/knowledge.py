@@ -1022,7 +1022,7 @@ async def authorize_knowledge_access(request: Request, auth_request: dict):
             insert_auth_sql = """
                 INSERT INTO knowledge_share
                 (to_user_email, knowledge_id, from_user_id, from_user_email, status) 
-                VALUES (%s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s)
             """
             cursor.execute(insert_auth_sql, (target_email, knowledge_id, user_id, email, 1))
             connection.commit()
