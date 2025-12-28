@@ -1319,7 +1319,7 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                 knowledge_map = {}
 
             # 组装返回数据
-            knowledge_items = {}
+            knowledge_items = []
             for share in share_results:
                 knowledge_id = share["knowledge_id"]
                 if knowledge_id in knowledge_map:
@@ -1350,7 +1350,7 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                             if hasattr(knowledge_data["update_time"], "isoformat") else str(
                             knowledge_data["update_time"])
 
-                    knowledge_items[share["id"]] = knowledge_item
+                    knowledge_items.append(knowledge_item)
 
             logger.info(f"Found {len(knowledge_items)} knowledge shares for user: {email}")
             return JSONResponse(
@@ -1358,7 +1358,7 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                 content={
                     "success": True,
                     "message": "Knowledge shares retrieved successfully",
-                    "data": {key: item.dict() for key, item in knowledge_items.items()},
+                    "data": [item.dict() for item in knowledge_items],
                     "total": total
                 }
             )
