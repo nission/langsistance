@@ -1336,7 +1336,11 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                         params=knowledge_data["params"] or "",
                         extra_info={
                             "from_user_email": share["from_user_email"],  # 添加from_user_email字段
-                            "share_id": share["id"]
+                            "share_id": share["id"],
+                            "status": share["status"],
+                            "to_user_email": share["to_user_email"],
+                            "share_create_time": share["create_time"].isoformat() if hasattr(share["create_time"], "isoformat") else str(share["create_time"]),
+                            "share_update_time": share["update_time"].isoformat() if hasattr(share["update_time"], "isoformat") else str(share["update_time"])
                         }
                     )
 
