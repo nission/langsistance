@@ -546,7 +546,6 @@ def get_tool_by_id(tool_id: int) -> Optional[ToolItem]:
                         title=tool_result['title'],
                         description=tool_result['description'],
                         url=tool_result['url'],
-                        push=tool_result['push'],
                         status=tool_result['status'],
                         timeout=tool_result['timeout'],
                         params=tool_result['params']
