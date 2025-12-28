@@ -1003,9 +1003,9 @@ async def authorize_knowledge_access(request: Request, auth_request: dict):
             # 获取目标用户的user_id
             # target_user_id = target_user_result["id"]
 
-            # 检查是否已经存在相同的授权记录
-            check_auth_sql = "SELECT id FROM knowledge_share WHERE from_user_id = %s AND to_user_email = %s AND knowledge_id = %s"
-            cursor.execute(check_auth_sql, (user_id, target_email, knowledge_id))
+            # 检查是否已经存在相同的待处理的授权记录
+            check_auth_sql = "SELECT id FROM knowledge_share WHERE from_user_id = %s AND to_user_email = %s AND knowledge_id = %s AND status = %s"
+            cursor.execute(check_auth_sql, (user_id, target_email, knowledge_id, 1))
             existing_auth = cursor.fetchone()
 
             if existing_auth:
