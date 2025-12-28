@@ -52,6 +52,7 @@ class KnowledgeItem(BaseModel):
     params: Optional[str] = None
     create_time: Optional[str] = None
     update_time: Optional[str] = None
+    extra_info: Optional[Dict[str, any]] = None
 
 
 class ToolItem(BaseModel):

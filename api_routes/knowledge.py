@@ -1290,7 +1290,7 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
 
             # 查询knowledge_share表获取分享记录
             share_query_sql = """
-                SELECT id, knowledge_id, from_user_id, create_time
+                SELECT id, knowledge_id, from_user_id, from_user_email, create_time
                 FROM knowledge_share 
                 WHERE to_user_email = %s AND status = 1
                 ORDER BY create_time DESC
@@ -1333,7 +1333,11 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
                         public=knowledge_data["public"],
                         model_name=knowledge_data["model_name"] or "",
                         tool_id=knowledge_data["tool_id"] or 0,
-                        params=knowledge_data["params"] or ""
+                        params=knowledge_data["params"] or "",
+                        extra_info={
+                            "from_user_email": share["from_user_email"],  # 添加from_user_email字段
+                            "share_id": share["id"]
+                        }
                     )
 
                     # 处理时间字段
