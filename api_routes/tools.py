@@ -938,33 +938,30 @@ async def query_tool_by_id(http_request: Request, tool_id: int):
                 }
             )
 
-        # 检查工具访问权限
-        tool_public = tool_item.public
         tool_owner_id = tool_item.user_id
 
-        # 如果工具不是公开的
-        if tool_public != 1:
-            # 用户未登录，无法访问私有工具
-            if not user_authenticated:
-                logger.warning(f"Unauthorized access to private tool {tool_id} by unauthenticated user")
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "success": False,
-                        "message": "Access denied. This is a private tool."
-                    }
-                )
+        # 用户未登录，无法访问工具
+        if not user_authenticated:
+            logger.warning(f"Unauthorized access to private tool {tool_id} by unauthenticated user")
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "success": False,
+                    "message": "Access denied. This is a private tool."
+                }
+            )
 
-            # 用户已登录，但不是工具所有者
-            if user_id != tool_owner_id:
-                logger.warning(f"Unauthorized access to private tool {tool_id} by user {user_id}")
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "success": False,
-                        "message": "Access denied. This is a private tool."
-                    }
-                )
+        # 用户已登录，但不是工具所有者
+        if user_id != tool_owner_id:
+            logger.warning(f"Unauthorized access to private tool {tool_id} by user {user_id}")
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "success": False,
+                    "message": "Access denied. This is a private tool."
+                }
+            )
+
 
         logger.info(f"Tool found with id: {tool_id}")
         return JSONResponse(
