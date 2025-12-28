@@ -3,7 +3,7 @@ import json
 import uuid
 from openai import OpenAI
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from pydantic import BaseModel
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -52,7 +52,7 @@ class KnowledgeItem(BaseModel):
     params: Optional[str] = None
     create_time: Optional[str] = None
     update_time: Optional[str] = None
-    extra_info: Optional[Dict[str, any]] = None
+    extra_info: Optional[Dict[str, Any]] = None
 
 
 class ToolItem(BaseModel):
