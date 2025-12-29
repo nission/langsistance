@@ -136,7 +136,7 @@ async def check_and_increase_usage(user_id: int) -> bool:
     return True
 
 
-def get_user_by_id(user_id: int):
+def get_user_by_id(user_id: str):
     """
     根据user_id查询user表，返回用户数据
 
