@@ -159,17 +159,17 @@ def get_user_by_id(user_id: str):
         result = cursor.fetchone()
 
         if result:
-            logger.info(f"result email: {result[2]} ")
+            logger.info(f"result email: {result['email']} ")
             # 将查询结果转换为字典格式
             user_data = {
-                'user_id': result[0],
-                'firebase_uid': result[1],
-                'email': result[2],
-                'oauth_provider': result[3],
-                'oauth_provider_id': result[4],
-                'is_active': result[5],
-                'create_time': result[6],
-                'update_time': result[7]
+                'user_id': result['user_id'],
+                'firebase_uid': result['firebase_uid'],
+                'email': result['email'],
+                'oauth_provider': result['oauth_provider'],
+                'oauth_provider_id': result['oauth_provider_id'],
+                'is_active': result['is_active'],
+                'create_time': result['create_time'],
+                'update_time': result['update_time']
             }
             logger.info(f"user data email: {user_data['email']} ")
             return user_data
