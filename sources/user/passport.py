@@ -5,6 +5,7 @@ from sources.knowledge.knowledge import get_db_connection, get_redis_connection
 import random
 from datetime import datetime, timedelta, timezone
 from sources.logger import Logger
+import traceback
 
 logger = Logger("passport.log")
 
@@ -177,6 +178,7 @@ def get_user_by_id(user_id: str):
 
     except Exception as e:
         logger.error(f"Error querying user by ID {user_id}: {str(e)}")
+        traceback.print_exc()
         return None
     finally:
         if conn:
