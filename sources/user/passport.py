@@ -1,7 +1,7 @@
 import firebase_admin
 from firebase_admin import auth, credentials
 from fastapi import HTTPException
-from sources.knowledge.knowledge import get_db_connection, get_redis_connection, create_tool_and_knowledge_records
+from sources.knowledge.knowledge import get_db_connection, get_redis_connection
 import random
 from datetime import datetime, timedelta, timezone
 from sources.logger import Logger
@@ -151,10 +151,10 @@ def get_user_by_id(user_id: str):
         cursor = conn.cursor()
 
         # 查询用户数据
-        cursor.execute(
-            "SELECT user_id, firebase_uid, email, oauth_provider, oauth_provider_id, is_active, create_time, update_time FROM users WHERE user_id = ?",
-            (user_id,)
-        )
+        query_sql = "SELECT user_id, firebase_uid, email, oauth_provider, oauth_provider_id, is_active, create_time, update_time FROM users WHERE user_id = %s"
+        params = [user_id]
+
+        cursor.execute(query_sql, params)
         result = cursor.fetchone()
         logger.info(f"result email: {result[2]} ")
         if result:
