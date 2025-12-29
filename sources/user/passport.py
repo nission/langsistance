@@ -152,7 +152,7 @@ def get_user_by_id(user_id: str):
 
         # 查询用户数据
         query_sql = "SELECT user_id, firebase_uid, email, oauth_provider, oauth_provider_id, is_active, create_time, update_time FROM users WHERE user_id = %s"
-        params = [user_id]
+        params = [int(user_id)]
 
         cursor.execute(query_sql, params)
         result = cursor.fetchone()
