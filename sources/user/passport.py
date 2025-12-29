@@ -156,8 +156,9 @@ def get_user_by_id(user_id: str):
 
         cursor.execute(query_sql, params)
         result = cursor.fetchone()
-        logger.info(f"result email: {result[2]} ")
+
         if result:
+            logger.info(f"result email: {result[2]} ")
             # 将查询结果转换为字典格式
             user_data = {
                 'user_id': result[0],
