@@ -746,6 +746,7 @@ async def query_public_knowledge(query: str, limit: int = 10, offset: int = 0):
 
                 # 添加用户邮箱到extra_info字段
                 user_info = get_user_by_id(int(row['user_id']))
+                logger.info(f"user info email: {user_info.get('email', '')}")
                 if user_info:
                     knowledge_item.extra_info = {
                         "email": user_info.get('email', '')
