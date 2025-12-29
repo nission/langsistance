@@ -156,7 +156,7 @@ def get_user_by_id(user_id: int):
             (user_id,)
         )
         result = cursor.fetchone()
-
+        logger.info(f"result email: {result[2]} ")
         if result:
             # 将查询结果转换为字典格式
             user_data = {
@@ -169,6 +169,7 @@ def get_user_by_id(user_id: int):
                 'create_time': result[6],
                 'update_time': result[7]
             }
+            logger.info(f"user data email: {user_data['email']} ")
             return user_data
         else:
             return None
