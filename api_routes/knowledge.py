@@ -13,7 +13,7 @@ from .models import (
 )
 from sources.knowledge.knowledge import get_embedding, get_db_connection, get_redis_connection, create_tool_and_knowledge_records, get_tool_by_id
 from sources.logger import Logger
-from sources.user.passport import verify_firebase_token
+from sources.user.passport import verify_firebase_token, get_user_by_id
 
 logger = Logger("backend.log")
 router = APIRouter()
@@ -743,6 +743,14 @@ async def query_public_knowledge(query: str, limit: int = 10, offset: int = 0):
                     tool_id=row['tool_id'] or 0,
                     params=row['params'] or ""
                 )
+
+                # 添加用户邮箱到extra_info字段
+                user_info = get_user_by_id(int(row['user_id']))
+                if user_info:
+                    knowledge_item.extra_info = {
+                        "email": user_info.get('email', '')
+                    }
+
                 # 处理时间字段
                 if row['create_time']:
                     knowledge_item.create_time = row['create_time'].isoformat() if hasattr(row['create_time'],

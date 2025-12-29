@@ -53,7 +53,7 @@ def verify_firebase_token(auth_header: str):
             cursor = conn.cursor()
 
             # 查询数据库中的 user 表
-            cursor.execute("SELECT user_id FROM user WHERE firebase_uid = ?", (firebase_uid,))
+            cursor.execute("SELECT user_id, email FROM user WHERE firebase_uid = ?", (firebase_uid,))
             result = cursor.fetchone()
 
             if result:
@@ -88,8 +88,8 @@ def verify_firebase_token(auth_header: str):
                 if user_id is not None and attempts < max_attempts:
                     # 插入数据库
                     cursor.execute(
-                        "INSERT INTO user (user_id, firebase_uid) VALUES (?, ?)",
-                        (user_id, firebase_uid)
+                        "INSERT INTO user (user_id, firebase_uid, email) VALUES (?, ?, ?)",
+                        (user_id, firebase_uid, decoded_token['email'])
                     )
                     conn.commit()
 
@@ -134,3 +134,48 @@ async def check_and_increase_usage(user_id: int) -> bool:
         return False
 
     return True
+
+
+def get_user_by_id(user_id: int):
+    """
+    根据user_id查询user表，返回用户数据
+
+    Args:
+        user_id (int): 用户ID
+
+    Returns:
+        dict: 用户数据，如果用户不存在则返回None
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 查询用户数据
+        cursor.execute(
+            "SELECT user_id, firebase_uid, email, oauth_provider, oauth_provider_id, is_active, create_time, update_time FROM user WHERE user_id = %s",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+
+        if result:
+            # 将查询结果转换为字典格式
+            user_data = {
+                'user_id': result[0],
+                'firebase_uid': result[1],
+                'email': result[2],
+                'oauth_provider': result[3],
+                'oauth_provider_id': result[4],
+                'is_active': result[5],
+                'create_time': result[6],
+                'update_time': result[7]
+            }
+            return user_data
+        else:
+            return None
+
+    except Exception as e:
+        logger.error(f"Error querying user by ID {user_id}: {str(e)}")
+        return None
+    finally:
+        if conn:
+            conn.close()
