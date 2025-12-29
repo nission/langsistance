@@ -5,7 +5,6 @@ from sources.knowledge.knowledge import get_db_connection, get_redis_connection
 import random
 from datetime import datetime, timedelta, timezone
 from sources.logger import Logger
-import traceback
 
 logger = Logger("passport.log")
 
@@ -159,7 +158,6 @@ def get_user_by_id(user_id: str):
         result = cursor.fetchone()
 
         if result:
-            logger.info(f"result email: {result['email']} ")
             # 将查询结果转换为字典格式
             user_data = {
                 'user_id': result['user_id'],
@@ -171,14 +169,12 @@ def get_user_by_id(user_id: str):
                 'create_time': result['create_time'],
                 'update_time': result['update_time']
             }
-            logger.info(f"user data email: {user_data['email']} ")
             return user_data
         else:
             return None
 
     except Exception as e:
         logger.error(f"Error querying user by ID {user_id}: {str(e)}")
-        traceback.print_exc()
         return None
     finally:
         if conn:
