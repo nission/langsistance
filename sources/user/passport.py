@@ -88,7 +88,7 @@ def verify_firebase_token(auth_header: str):
                 if user_id is not None and attempts < max_attempts:
                     # 插入数据库
                     cursor.execute(
-                        "INSERT INTO user (user_id, firebase_uid, email) VALUES (?, ?, ?)",
+                        "INSERT INTO users (user_id, firebase_uid, email) VALUES (?, ?, ?)",
                         (user_id, firebase_uid, decoded_token['email'])
                     )
                     conn.commit()
@@ -152,7 +152,7 @@ def get_user_by_id(user_id: int):
 
         # 查询用户数据
         cursor.execute(
-            "SELECT user_id, firebase_uid, email, oauth_provider, oauth_provider_id, is_active, create_time, update_time FROM user WHERE user_id = %s",
+            "SELECT user_id, firebase_uid, email, oauth_provider, oauth_provider_id, is_active, create_time, update_time FROM users WHERE user_id = %s",
             (user_id,)
         )
         result = cursor.fetchone()
