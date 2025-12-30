@@ -549,8 +549,8 @@ def get_tool_by_id(tool_id: int) -> Optional[ToolItem]:
                         description=tool_result['description'],
                         url=tool_result['url'],
                         status=tool_result['status'],
-                        create_time=tool_result['create_time'],
-                        update_time=tool_result['update_time'],
+                        create_time=tool_result['create_time'].isoformat() if tool_result['create_time'] else None,
+                        update_time=tool_result['update_time'].isoformat() if tool_result['update_time'] else None,
                         timeout=tool_result['timeout'],
                         params=tool_result['params']
                     )
