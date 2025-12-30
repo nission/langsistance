@@ -64,6 +64,8 @@ class ToolItem(BaseModel):
     status: Optional[bool]
     timeout: Optional[int]
     params: Optional[str] = None
+    create_time: Optional[str] = None
+    update_time: Optional[str] = None
 
 
 def get_embedding(text: str) -> List[float]:
@@ -547,6 +549,8 @@ def get_tool_by_id(tool_id: int) -> Optional[ToolItem]:
                         description=tool_result['description'],
                         url=tool_result['url'],
                         status=tool_result['status'],
+                        create_time=tool_result['create_time'],
+                        update_time=tool_result['update_time'],
                         timeout=tool_result['timeout'],
                         params=tool_result['params']
                     )
