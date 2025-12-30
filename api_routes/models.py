@@ -84,7 +84,8 @@ class ToolUpdateRequest(BaseModel):
     toolId: int
     title: Optional[str] = None
     description: Optional[str] = None
-    public: Optional[int] = None
+    url: Optional[str] = None
+    params: Optional[str] = None
 
 class ToolUpdateResponse(BaseModel):
     success: bool

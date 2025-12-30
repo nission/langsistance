@@ -149,7 +149,7 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest, http
 @router.post("/update_tool", response_model=ToolUpdateResponse)
 async def update_tool(request: ToolUpdateRequest,  http_request:  Request):
     """
-    更新工具接口（仅允许更新title、description和public字段）
+    更新工具接口（仅允许更新title、description、url和params字段）
     """
     auth_header = http_request.headers.get("Authorization")
     user = verify_firebase_token(auth_header)
@@ -169,6 +169,12 @@ async def update_tool(request: ToolUpdateRequest,  http_request:  Request):
 
     if request.description is not None and (not request.description or len(request.description) > 5000):
         errors.append("description must be between 1 and 5000 characters")
+
+    if request.url is not None and (not request.url or len(request.url) > 1000):
+        errors.append("url must be between 1 and 1000 characters")
+
+    if request.params is not None and len(request.params) > 5000:
+        errors.append("params must be no more than 5000 characters")
 
     if errors:
         logger.error(f"Validation errors: {errors}")
@@ -225,9 +231,13 @@ async def update_tool(request: ToolUpdateRequest,  http_request:  Request):
                 update_fields.append("description = %s")
                 update_params.append(request.description)
 
-            if request.public is not None:
-                update_fields.append("public = %s")
-                update_params.append(request.public)
+            if request.url is not None:
+                update_fields.append("url = %s")
+                update_params.append(request.url)
+
+            if request.params is not None:
+                update_fields.append("params = %s")
+                update_params.append(request.params)
 
             # 如果没有任何字段需要更新
             if not update_fields:
