@@ -149,3 +149,16 @@ class OpenAPISpecResponse(BaseModel):
     success: bool
     message: str
     tool_id: Optional[int] = None
+
+class ToolCreateRequest(BaseModel):
+    # Tool fields
+    tool_title: str
+    tool_description: str
+    tool_url: str
+    tool_params: str
+    tool_timeout: Optional[int] = None
+
+class ToolCreateResponse(BaseModel):
+    success: bool
+    message: str
+    tool_id: Optional[int] = None
