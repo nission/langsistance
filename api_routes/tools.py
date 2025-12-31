@@ -13,7 +13,8 @@ from .models import (
     ToolQueryResponse, ToolItem,
     ToolFetchRequest, ToolFetchResponse,
     ToolResponseRequest, ToolResponseResponse,
-    OpenAPISpecRequest, OpenAPISpecResponse
+    OpenAPISpecRequest, OpenAPISpecResponse,
+    ToolCreateRequest, ToolCreateResponse
 )
 from sources.knowledge.knowledge import get_db_connection, get_redis_connection, create_tool_and_knowledge_records, get_tool_by_id
 from sources.logger import Logger
@@ -1169,6 +1170,102 @@ async def create_tool_from_openapi(request: OpenAPISpecRequest, http_request: Re
             }
         )
 
+    finally:
+        if connection:
+            connection.close()
+
+@router.post("/create_tool", response_model=ToolCreateResponse)
+async def create_tool(request: ToolCreateRequest, http_request: Request):
+    """
+    创建工具接口
+    直接创建工具记录到tools表
+    """
+    auth_header = http_request.headers.get("Authorization")
+    user = verify_firebase_token(auth_header)
+
+    user_id = user['uid']
+
+    logger.info(f"Creating tool for user: {user_id}")
+
+    # 参数校验
+    errors = []
+
+    if not user_id or len(user_id) > 50:
+        errors.append("user_id is required and must be no more than 50 characters")
+
+    if not request.tool_title or len(request.tool_title) > 100:
+        errors.append("tool_title is required and must be no more than 100 characters")
+
+    if not request.tool_description or len(request.tool_description) > 5000:
+        errors.append("tool_description is required and must be no more than 5000 characters")
+
+    if not request.tool_url or len(request.tool_url) > 1000:
+        errors.append("tool_url is required and must be no more than 1000 characters")
+
+    if len(request.tool_params) > 5000:
+        errors.append("tool_params must be no more than 5000 characters")
+
+    if errors:
+        logger.error(f"Validation errors: {errors}")
+        return JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "message": "Validation failed",
+                "errors": errors,
+                "tool_id": None,
+            }
+        )
+
+    connection = None
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            # 插入工具数据到数据库
+            insert_sql = """
+                INSERT INTO tools 
+                (user_id, title, description, url, push, public, status, timeout, params)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(insert_sql, (
+                user_id,
+                request.tool_title,
+                request.tool_description,
+                request.tool_url,
+                1,
+                1,
+                1,  # status默认为1(有效)
+                30,
+                request.tool_params
+            ))
+            connection.commit()
+
+            # 获取插入的记录ID
+            tool_id = cursor.lastrowid
+
+            logger.info(f"Tool created successfully with ID: {tool_id}")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "success": True,
+                    "message": "Tool created successfully",
+                    "tool_id": tool_id,
+                }
+            )
+
+    except Exception as e:
+        if connection:
+            connection.rollback()
+        logger.error(f"Database error: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": f"Database error: {str(e)}",
+                "tool_id": None,
+            }
+        )
     finally:
         if connection:
             connection.close()
