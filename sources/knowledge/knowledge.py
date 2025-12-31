@@ -178,9 +178,14 @@ def get_redis_connection():
     """创建并返回 Redis 连接"""
     # 优先从环境变量获取 Redis 配置
     redis_host = os.getenv('REDIS_HOST')
-    redis_port = os.getenv('REDIS_PORT')
+    redis_port = int(os.getenv('REDIS_PORT'))
     logger.info(f"redis_host: {redis_host}, redis_port: {redis_port}")
-    return redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
+    try:
+        return redis.Redis(host=redis_host, port=redis_port, decode_responses=True, socket_connect_timeout=10, socket_timeout=10)
+    except Exception as e:
+        logger.error(f"Failed to create Redis connection: {str(e)}")
+        raise e
+
 
 
 def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
