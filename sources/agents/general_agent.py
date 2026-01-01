@@ -197,7 +197,7 @@ class GeneralAgent(Agent):
 
                             params_json = json.dumps(param_dict)
 
-                            redis_conn.set(redis_key, params_json)
+                            redis_conn.set(redis_key, params_json, ex=1200)
 
                             # 轮询读取tool_response_{query_id}
                             response_key = f"tool_response_{query_id}_{user_id}"
