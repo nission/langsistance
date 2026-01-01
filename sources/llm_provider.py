@@ -234,10 +234,10 @@ class Provider:
         #     ("human", "{input}"),
         #     MessagesPlaceholder("agent_scratchpad"),  # 用于存放Agent思考过程和工具调用的位置
         # ])
-        agent = create_agent(llm, tools, system_prompt=history[1]["content"])
-        response = agent.invoke({"messages": [{"role": "user", "content": history[0]["content"]}]})
-
         try:
+
+            agent = create_agent(llm, tools, system_prompt=history[1]["content"])
+            response = agent.invoke({"messages": [{"role": "user", "content": history[0]["content"]}]})
 
             self.logger.info(f"response:{response}")
             if response is None:

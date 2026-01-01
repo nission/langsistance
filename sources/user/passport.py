@@ -116,7 +116,7 @@ def seconds_until_end_of_day() -> int:
 
 MAX_DAILY_CALLS = 100
 
-async def check_and_increase_usage(user_id: int) -> bool:
+def check_and_increase_usage(user_id: int) -> bool:
     """
     返回 True：允许调用
     返回 False：超过当日限制
@@ -124,11 +124,11 @@ async def check_and_increase_usage(user_id: int) -> bool:
     today = datetime.utcnow().strftime("%Y%m%d")
     key = f"api_usage_{user_id}_{today}"
 
-    count = await redis_client.incr(key)
+    count = redis_client.incr(key)
 
     if count == 1:
         # 第一次使用，设置过期时间到当天结束
-        await redis_client.expire(key, seconds_until_end_of_day())
+        redis_client.expire(key, seconds_until_end_of_day())
 
     if count > MAX_DAILY_CALLS:
         return False
