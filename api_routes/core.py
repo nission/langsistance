@@ -53,7 +53,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
         user_id = user['uid']
 
-        allowed = await check_and_increase_usage(user_id)
+        allowed = check_and_increase_usage(user_id)
         if not allowed:
             return JSONResponse(status_code=429, content="Daily API usage limit exceeded (100/day)")
 
