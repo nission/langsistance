@@ -66,7 +66,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             answer="",
             reasoning="",
             agent_name="Unknown",
-            success="false",
+            success=False,
             blocks={},
             status="Ready",
             uid=str(uuid.uuid4())
@@ -100,7 +100,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             query_resp.answer = interaction_ref.last_answer
             query_resp.reasoning = interaction_ref.last_reasoning
             query_resp.agent_name = interaction_ref.current_agent.agent_name
-            query_resp.success = str(interaction_ref.last_success)
+            query_resp.success = interaction_ref.last_success
             query_resp.blocks = blocks_json
             
             query_resp_dict = {
