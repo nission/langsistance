@@ -81,15 +81,13 @@ def verify_firebase_token(auth_header: str):
                     # 检查user_id是否已存在
                     cursor.execute("SELECT COUNT(*) FROM users WHERE user_id = %s", (new_user_id,))
                     row = cursor.fetchone()
-                    count = row[0] if row else 0
                     logger.info(f"attempt: {attempts}, new user id: {new_user_id}")
-
-                    if count == 0:
+                    if row and row[0] > 0:
+                        attempts += 1
+                    else:
                         # user_id唯一，可以使用
                         user_id = new_user_id
                         break
-
-                    attempts += 1
 
                 logger.info(f"user id is {user_id}, attempts: {attempts}")
 
