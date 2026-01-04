@@ -5,7 +5,7 @@ from sources.knowledge.knowledge import get_db_connection, get_redis_connection
 import random
 from datetime import datetime, timedelta, timezone
 from sources.logger import Logger
-import traceback, json, base64
+import traceback
 
 logger = Logger("passport.log")
 
@@ -38,15 +38,12 @@ def verify_firebase_token(auth_header: str):
         raise HTTPException(status_code=401, detail="Missing token")
 
     id_token = auth_header.split("Bearer ")[1]
-    logger.info(f"verify firebase token id token: {id_token}")
+
     try:
-        payload = id_token.split('.')[1]
-        payload += '=' * (-len(payload) % 4)
-        print(json.loads(base64.urlsafe_b64decode(payload)))
 
         decoded_token = auth.verify_id_token(id_token)
         firebase_uid = decoded_token['uid']
-        logger.info(f"firebase_uid: {firebase_uid}")
+
         # 先检查 Redis 中是否存在
         user_data = redis_client.get(f"firebase_uid_{firebase_uid}")
         if user_data:
@@ -89,8 +86,6 @@ def verify_firebase_token(auth_header: str):
                         user_id = new_user_id
                         break
 
-                logger.info(f"user id is {user_id}, attempts: {attempts}")
-
                 # 如果成功生成了唯一的user_id，则插入数据库
                 if user_id is not None and attempts < max_attempts:
                     # 插入数据库
@@ -112,9 +107,6 @@ def verify_firebase_token(auth_header: str):
 
         return decoded_token
     except Exception as e:
-        print("Exception type:", type(e))
-        print("Exception message:", str(e))
-        traceback.print_exc()
         raise HTTPException(status_code=401, detail="Invalid token")
 
 def seconds_until_end_of_day() -> int:
