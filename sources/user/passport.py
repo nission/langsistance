@@ -58,7 +58,7 @@ def verify_firebase_token(auth_header: str):
             cursor = conn.cursor()
 
             # 查询数据库中的 user 表
-            cursor.execute("SELECT user_id, email FROM users WHERE firebase_uid = ?", (firebase_uid,))
+            cursor.execute("SELECT user_id, email FROM users WHERE firebase_uid = %s", (firebase_uid,))
             result = cursor.fetchone()
 
             if result:
@@ -79,7 +79,7 @@ def verify_firebase_token(auth_header: str):
                     new_user_id = random.randint(10 ** 63, 10 ** 64 - 1)
 
                     # 检查user_id是否已存在
-                    cursor.execute("SELECT COUNT(*) FROM users WHERE user_id = ?", (new_user_id,))
+                    cursor.execute("SELECT COUNT(*) FROM users WHERE user_id = %s", (new_user_id,))
                     user_exists = cursor.fetchone()[0] > 0
 
                     if not user_exists:
@@ -93,7 +93,7 @@ def verify_firebase_token(auth_header: str):
                 if user_id is not None and attempts < max_attempts:
                     # 插入数据库
                     cursor.execute(
-                        "INSERT INTO users (user_id, firebase_uid, email) VALUES (?, ?, ?)",
+                        "INSERT INTO users (user_id, firebase_uid, email) VALUES (%s, %s, %s)",
                         (user_id, firebase_uid, decoded_token['email'])
                     )
                     conn.commit()
