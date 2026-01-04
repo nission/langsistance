@@ -76,7 +76,7 @@ def verify_firebase_token(auth_header: str):
 
                 while attempts < max_attempts:
                     # 生成64位正整数作为 user_id
-                    new_user_id = random.randint(10 ** 63, 10 ** 64 - 1)
+                    new_user_id = random.getrandbits(64)
 
                     # 检查user_id是否已存在
                     cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE user_id = %s", (new_user_id,))
