@@ -79,10 +79,10 @@ def verify_firebase_token(auth_header: str):
                     new_user_id = random.randint(10 ** 63, 10 ** 64 - 1)
 
                     # 检查user_id是否已存在
-                    cursor.execute("SELECT COUNT(*) FROM users WHERE user_id = %s", (new_user_id,))
+                    cursor.execute("SELECT COUNT(*) AS cnt FROM users WHERE user_id = %s", (new_user_id,))
                     row = cursor.fetchone()
                     logger.info(f"attempt: {attempts}, new user id: {new_user_id}")
-                    if row and row[0] > 0:
+                    if row and row['cnt'] > 0:
                         attempts += 1
                     else:
                         # user_id唯一，可以使用
