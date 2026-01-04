@@ -80,7 +80,7 @@ def verify_firebase_token(auth_header: str):
 
                     # 检查user_id是否已存在
                     cursor.execute("SELECT COUNT(*) FROM users WHERE user_id = %s", (new_user_id,))
-                    user_exists = cursor.fetchone()[0] > 0
+                    user_exists = cursor.fetchone()
 
                     if not user_exists:
                         # user_id唯一，可以使用
