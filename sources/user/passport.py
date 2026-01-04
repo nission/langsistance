@@ -51,7 +51,7 @@ def verify_firebase_token(auth_header: str):
         user_data = redis_client.get(f"firebase_uid_{firebase_uid}")
         if user_data:
             # Redis 中存在，用缓存的 user_id 覆盖 uid
-            decoded_token['uid'] = int(user_data.decode('utf-8'))
+            decoded_token['uid'] = user_data
         else:
             # Redis 中不存在，查询数据库
             conn = get_db_connection()
@@ -63,10 +63,10 @@ def verify_firebase_token(auth_header: str):
 
             if result:
                 # 数据库中找到记录，用 user_id 覆盖 uid
-                user_id = result[0]
+                user_id = result['user_id']
                 decoded_token['uid'] = user_id
                 # 写入 Redis 缓存
-                redis_client.setex(f"firebase_uid_{firebase_uid}", 864000, user_id)  # 缓存1小时
+                redis_client.setex(f"firebase_uid_{firebase_uid}", user_id, 86400)  # 缓存1小时
             else:
                 # 数据库中也不存在，需要创建新用户
                 # 最多尝试5次生成唯一的user_id
@@ -103,7 +103,7 @@ def verify_firebase_token(auth_header: str):
                     # 用新生成的 user_id 覆盖 uid
                     decoded_token['uid'] = user_id
                     # 写入 Redis 缓存
-                    redis_client.setex(f"firebase_uid_{firebase_uid}", 864000, user_id)  # 缓存10天
+                    redis_client.setex(f"firebase_uid_{firebase_uid}", user_id, 86400)  # 缓存10天
                 elif attempts >= max_attempts:
                     conn.close()
                     raise HTTPException(status_code=500, detail="Failed to generate unique user_id after 5 attempts")
