@@ -150,14 +150,6 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
         try:
             # 参数校验
-            if not user_id or len(user_id) > 50:
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "success": False,
-                        "message": "user_id is required and must be no more than 50 characters"
-                    }
-                )
 
             if not request.question:
                 return JSONResponse(

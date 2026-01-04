@@ -33,9 +33,6 @@ async def create_knowledge_record(request: KnowledgeCreateRequest, http_request:
     # 参数校验
     errors = []
 
-    if not user_id or len(user_id) > 50:
-        errors.append("userId is required and must be no more than 50 characters")
-
     if not request.question or len(request.question) > 100:
         errors.append("question is required and must be no more than 100 characters")
 
@@ -162,9 +159,6 @@ async def delete_knowledge_record(request: KnowledgeDeleteRequest, http_request:
     # 参数校验
     errors = []
 
-    if not user_id or len(user_id) > 50:
-        errors.append("userId is required and must be no more than 50 characters")
-
     if not request.knowledgeId:
         errors.append("knowledgeId is required")
 
@@ -267,9 +261,6 @@ async def update_knowledge_record(request: KnowledgeUpdateRequest, http_request:
 
     # 参数校验
     errors = []
-
-    if not user_id or len(user_id) > 50:
-        errors.append("userId is required and must be no more than 50 characters")
 
     if not request.knowledgeId:
         errors.append("knowledgeId is required")
@@ -452,9 +443,6 @@ async def query_knowledge_records(http_request: Request, query: str, limit: int 
 
     # 参数校验
     errors = []
-
-    if not user_id or len(user_id) > 50:
-        errors.append("userId is required and must be no more than 50 characters")
 
     if limit <= 0 or limit > 100:
         errors.append("limit must be between 1 and 100")
@@ -805,9 +793,6 @@ async def copy_knowledge(request: KnowledgeCopyRequest, http_request: Request):
 
     # 参数校验
     errors = []
-
-    if not user_id or len(user_id) > 50:
-        errors.append("userId is required and must be no more than 50 characters")
 
     if not request.knowledgeId:
         errors.append("knowledgeId is required")
@@ -1247,9 +1232,6 @@ async def query_knowledge_shares(http_request: Request, limit: int = 10, offset:
     # 参数校验
     errors = []
 
-    if not user_id or len(user_id) > 50:
-        errors.append("userId is required")
-
     if limit <= 0 or limit > 100:
         errors.append("limit must be between 1 and 100")
 
@@ -1403,9 +1385,6 @@ async def get_user_shared_knowledge(http_request: Request, limit: int = 10, offs
 
     # 参数校验
     errors = []
-
-    if not user_id or len(user_id) > 50:
-        errors.append("userId is required")
 
     if limit <= 0 or limit > 100:
         errors.append("limit must be between 1 and 100")

@@ -39,9 +39,6 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest, http
     # 参数校验 - Tool部分
     tool_errors = []
 
-    if not user_id or len(user_id) > 50:
-        tool_errors.append("tool_user_id is required and must be no more than 50 characters")
-
     if not request.tool_title or len(request.tool_title) > 100:
         tool_errors.append("tool_title is required and must be no more than 100 characters")
 
@@ -161,9 +158,6 @@ async def update_tool(request: ToolUpdateRequest,  http_request:  Request):
 
     # 参数校验
     errors = []
-
-    if not user_id or len(user_id) > 50:
-        errors.append("user_id is required and must be no more than 50 characters")
 
     if request.title is not None and (not request.title or len(request.title) > 100):
         errors.append("title must be between 1 and 100 characters")
@@ -299,9 +293,6 @@ async def delete_tool(request: ToolDeleteRequest, http_request:  Request):
     # 参数校验
     errors = []
 
-    if not user_id or len(user_id) > 50:
-        errors.append("user_id is required and must be no more than 50 characters")
-
     if not request.toolId:
         errors.append("toolId is required")
 
@@ -391,9 +382,6 @@ async def query_tool_records(http_request: Request, query: str = "", limit: int 
 
     # 参数校验
     errors = []
-
-    if not user_id or len(user_id) > 50:
-        errors.append("user_id is required and must be no more than 50 characters")
 
     if limit <= 0 or limit > 100:
         errors.append("limit must be between 1 and 100")
@@ -703,15 +691,6 @@ async def get_tool_request(request: ToolFetchRequest, http_request: Request):
 
     try:
         # 参数校验
-        if not user_id or len(user_id) > 50:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "message": "user_id is required and must be no more than 50 characters"
-                }
-            )
-
         if not request.query_id:
             return JSONResponse(
                 status_code=400,
@@ -814,15 +793,6 @@ async def save_tool_response(request: ToolResponseRequest, http_request: Request
 
     try:
         # 参数校验
-        if not user_id or len(user_id) > 50:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "message": "user_id is required and must be no more than 50 characters"
-                }
-            )
-
         if not request.query_id:
             return JSONResponse(
                 status_code=400,
@@ -1086,9 +1056,6 @@ async def create_tool_from_openapi(request: OpenAPISpecRequest, http_request: Re
 
         # 验证字段长度
         errors = []
-        if not user_id or len(user_id) > 50:
-            errors.append("user_id is required and must be no more than 50 characters")
-
         if len(title) > 100:
             errors.append("title must be no more than 100 characters")
 
@@ -1189,9 +1156,6 @@ async def create_tool(request: ToolCreateRequest, http_request: Request):
 
     # 参数校验
     errors = []
-
-    if not user_id or len(user_id) > 50:
-        errors.append("user_id is required and must be no more than 50 characters")
 
     if not request.tool_title or len(request.tool_title) > 100:
         errors.append("tool_title is required and must be no more than 100 characters")
