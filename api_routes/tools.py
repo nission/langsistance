@@ -73,7 +73,7 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest, http
     if not request.knowledge_question or len(request.knowledge_question) > 100:
         knowledge_errors.append("knowledge_question is required and must be no more than 100 characters")
 
-    if not request.knowledge_description or len(request.knowledge_description) > 5000:
+    if request.knowledge_description and len(request.knowledge_description) > 5000:
         knowledge_errors.append("knowledge_description is required and must be no more than 5000 characters")
 
     if not request.knowledge_answer or len(request.knowledge_answer) > 5000:
