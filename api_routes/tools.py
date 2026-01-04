@@ -861,7 +861,7 @@ async def save_tool_response(request: ToolResponseRequest, http_request: Request
         # 将tool_response数据存储到Redis
         try:
             tool_response_str = json.dumps(request.tool_response)
-            redis_conn.set(redis_key, tool_response_str)
+            redis_conn.set(redis_key, tool_response_str, ex=1200)
             logger.info(f"Successfully saved tool response to Redis with key: {redis_key}")
 
             return JSONResponse(

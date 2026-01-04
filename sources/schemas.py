@@ -23,7 +23,7 @@ class QueryResponse(BaseModel):
     answer: str
     reasoning: str
     agent_name: str
-    success: str
+    success: bool
     blocks: dict
     status: str
     uid: str
