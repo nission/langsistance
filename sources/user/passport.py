@@ -30,8 +30,8 @@ WHITELIST_TOKENS = {
 def verify_firebase_token(auth_header: str):
     logger.info(f"verify firebase token auther header: {auth_header}")
     # 检查是否为白名单请求
-    if auth_header in WHITELIST_TOKENS:
-        return WHITELIST_TOKENS[auth_header]
+    # if auth_header in WHITELIST_TOKENS:
+    #     return WHITELIST_TOKENS[auth_header]
 
     if not auth_header or not auth_header.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
