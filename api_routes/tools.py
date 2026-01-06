@@ -102,7 +102,6 @@ async def create_tool_and_knowledge(request: ToolAndKnowledgeCreateRequest, http
         'description': request.tool_description,
         'url': request.tool_url,
         'push': request.tool_push,
-        'public': request.tool_public,
         'timeout': request.tool_timeout,
         'params': request.tool_params
     }

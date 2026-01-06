@@ -419,8 +419,8 @@ def create_tool_and_knowledge_records(tool_data: dict, knowledge_data: dict) -> 
             # 插入 Tool 数据
             tool_sql = """
                        INSERT INTO tools
-                       (user_id, title, description, url, push, public, status, timeout, params)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                       (user_id, title, description, url, push, status, timeout, params)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                        """
             cursor.execute(tool_sql, (
                 tool_data['user_id'],
@@ -428,7 +428,6 @@ def create_tool_and_knowledge_records(tool_data: dict, knowledge_data: dict) -> 
                 tool_data['description'],
                 tool_data['url'],
                 tool_data['push'],
-                tool_data['public'],
                 1,  # status
                 tool_data['timeout'],
                 tool_data['params']
