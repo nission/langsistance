@@ -62,7 +62,6 @@ class ToolAndKnowledgeCreateRequest(BaseModel):
     tool_description: str
     tool_url: str
     tool_push: int
-    tool_public: int
     tool_timeout: int
     tool_params: str
     # Knowledge fields
