@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CopiioAI - Turn APIs into Conversations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            scroll-behavior: smooth;
+        }
+        /* Frosted glass effect for header */
+        header {
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Fixed Header -->
+    <header class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
+        <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">C</span>
+                </div>
+                <span class="text-xl font-semibold text-gray-900">CopiioAI</span>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                    </svg>
+                    <span>Chrome Extension</span>
+                </button>
+                <button class="flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>Desktop App</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content (with top padding to account for fixed header) -->
+    <main class="pt-20">
+        <!-- Hero Section -->
+        <section class="max-w-7xl mx-auto px-6 py-20 text-center">
+            <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+                Turn any API into a chat.<br>
+                No frontend required.
+            </h1>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto mb-12">
+                Build and share chat-based tools powered by your APIs — so anyone can access real data with natural language.
+            </p>
+            <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <div class="aspect-video bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                    <div class="text-white text-center">
+                        <div class="text-6xl mb-4">🎥</div>
+                        <p class="text-lg">Video Demo Placeholder</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- What is CopiioAI Section -->
+        <section class="bg-white py-20">
+            <div class="max-w-7xl mx-auto px-6">
+                <h2 class="text-4xl font-bold text-gray-900 text-center mb-16">What is CopiioAI?</h2>
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-700">
+                            CopiioAI is an AI-native tool that lets you turn APIs into conversational interfaces.
+                        </p>
+                        <p class="text-lg text-gray-700">
+                            Instead of building dashboards or frontend pages, you can publish your APIs as chat-based tools and let others query them using plain language.
+                        </p>
+                        <p class="text-lg font-semibold text-gray-900">
+                            No UI. No setup. No engineering overhead.
+                        </p>
+                    </div>
+                    <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl shadow-xl overflow-hidden">
+                        <div class="aspect-video flex items-center justify-center">
+                            <div class="text-white text-center">
+                                <div class="text-6xl mb-4">💬</div>
+                                <p class="text-lg">Conversational AI Interface</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- What can CopiioAI do Section -->
+        <section class="py-20">
+            <div class="max-w-7xl mx-auto px-6">
+                <h2 class="text-4xl font-bold text-gray-900 text-center mb-16">What can CopiioAI do?</h2>
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="rounded-2xl overflow-hidden shadow-xl">
+                        <img src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&h=600&fit=crop" alt="Team Collaboration" class="w-full h-full object-cover">
+                    </div>
+                    <div class="space-y-8">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Turn APIs into chat tools</h3>
+                            <p class="text-gray-600">Expose any API as a conversational interface that understands user intent.</p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Share APIs with non-technical users</h3>
+                            <p class="text-gray-600">Let teammates, operators, or stakeholders access data without knowing how APIs work.</p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Skip frontend development</h3>
+                            <p class="text-gray-600">No dashboards, no components, no permissions to frontend codebases.</p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Control and update centrally</h3>
+                            <p class="text-gray-600">Update logic and knowledge once — all users get the latest version.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How does it work Section -->
+        <section class="bg-white py-20">
+            <div class="max-w-7xl mx-auto px-6">
+                <h2 class="text-4xl font-bold text-gray-900 text-center mb-16">How does it work?</h2>
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-8">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-teal-600 text-white rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0">1</div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 mb-2">Connect or capture an API</h3>
+                                <p class="text-gray-600">Import your API directly or capture requests from a browser session.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-teal-600 text-white rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0">2</div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 mb-2">Add knowledge and examples</h3>
+                                <p class="text-gray-600">Describe how the API should be used and what questions it can answer.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-teal-600 text-white rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0">3</div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 mb-2">Share as a chat</h3>
+                                <p class="text-gray-600">Generate a link and let others interact with your API through conversation.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rounded-2xl overflow-hidden shadow-xl">
+                        <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=600&fit=crop" alt="Workflow Process" class="w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Built for Real Use Cases Section -->
+        <section class="py-20">
+            <div class="max-w-7xl mx-auto px-6">
+                <h2 class="text-4xl font-bold text-gray-900 text-center mb-16">Built for Real Use Cases</h2>
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="rounded-2xl overflow-hidden shadow-xl">
+                        <img src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&h=600&fit=crop" alt="Coding on Laptop" class="w-full h-full object-cover">
+                    </div>
+                    <div class="space-y-6">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-2 h-2 bg-teal-600 rounded-full mt-2 flex-shrink-0"></div>
+                            <p class="text-lg text-gray-700">Internal dashboards and metrics</p>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-2 h-2 bg-teal-600 rounded-full mt-2 flex-shrink-0"></div>
+                            <p class="text-lg text-gray-700">Ops and analytics queries</p>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-2 h-2 bg-teal-600 rounded-full mt-2 flex-shrink-0"></div>
+                            <p class="text-lg text-gray-700">Admin and support tools</p>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-2 h-2 bg-teal-600 rounded-full mt-2 flex-shrink-0"></div>
+                            <p class="text-lg text-gray-700">Temporary or urgent data access needs</p>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-2 h-2 bg-teal-600 rounded-full mt-2 flex-shrink-0"></div>
+                            <p class="text-lg text-gray-700">Sharing APIs with non-engineers</p>
+                        </div>
+                        <p class="text-gray-600 italic pt-4">
+                            CopiioAI is ideal for any scenario where building a UI is overkill.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why CopiioAI Section -->
+        <section class="bg-white py-20">
+            <div class="max-w-7xl mx-auto px-6">
+                <h2 class="text-4xl font-bold text-gray-900 text-center mb-16">Why CopiioAI?</h2>
+                <div class="grid md:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-6">
+                        <p class="text-lg text-gray-700">
+                            Traditional tools assume users are developers.
+                        </p>
+                        <p class="text-lg font-bold text-gray-900">
+                            CopiioAI assumes users have questions.
+                        </p>
+                        <p class="text-lg text-gray-700">
+                            We combine large language models with APIs so people can get answers directly — without learning tools, interfaces, or query languages.
+                        </p>
+                    </div>
+                    <div class="rounded-2xl overflow-hidden shadow-xl">
+                        <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=600&fit=crop" alt="People Collaborating" class="w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="bg-gradient-to-r from-teal-600 to-teal-700 py-20">
+            <div class="max-w-4xl mx-auto px-6 text-center">
+                <h2 class="text-4xl font-bold text-white mb-8">Get Started Now</h2>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button class="flex items-center justify-center space-x-2 px-8 py-4 bg-white text-teal-600 rounded-lg hover:bg-gray-100 transition font-semibold text-lg shadow-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                        </svg>
+                        <span>Download Chrome Extension</span>
+                    </button>
+                    <button class="flex items-center justify-center space-x-2 px-8 py-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition font-semibold text-lg shadow-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>Download Desktop App</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-100 py-12">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-8">
+                <h3 class="text-2xl font-bold text-gray-900 mb-4">Community & Support</h3>
+                <a href="mailto:support@copiio.ai" class="text-teal-600 hover:text-teal-700 text-lg flex items-center justify-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                    <span>support@copiio.ai</span>
+                </a>
+            </div>
+            <div class="border-t border-gray-300 pt-8 text-center">
+                <div class="flex items-center justify-center space-x-2 mb-4">
+                    <div class="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">C</span>
+                    </div>
+                    <span class="text-xl font-semibold text-gray-900">CopiioAI</span>
+                </div>
+                <p class="text-gray-600">Turn APIs into conversations.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
