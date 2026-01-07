@@ -66,7 +66,8 @@ setup(
         "passlib>=1.7.4",
         "python-jose>=3.5.0",
         "authlib>=1.6.4",
-        "firebase-admin>=7.1.0"
+        "firebase-admin>=7.1.0",
+        "bs4>=0.0.2"
     ],
     extras_require={
         "chinese": [

@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from typing import List
+from bs4 import BeautifulSoup
 import json
 import yaml
 import re
@@ -811,6 +812,17 @@ async def save_tool_response(request: ToolResponseRequest, http_request: Request
                 }
             )
 
+        # 处理tool_response中的html内容，移除HTML标签
+        processed_tool_response = request.tool_response
+        if isinstance(processed_tool_response, dict) and 'html' in processed_tool_response:
+            html_content = processed_tool_response['html']
+            if isinstance(html_content, str):
+                #使用BeautifulSoup移除HTML标签
+                cleaned_html = BeautifulSoup(html_content, "html.parser").get_text()
+                # 创建一个新的字典副本
+                processed_tool_response = processed_tool_response.copy()
+                processed_tool_response['html'] = cleaned_html
+
         # 创建Redis连接
         redis_conn = None
         try:
@@ -830,7 +842,7 @@ async def save_tool_response(request: ToolResponseRequest, http_request: Request
 
         # 将tool_response数据存储到Redis
         try:
-            tool_response_str = json.dumps(request.tool_response)
+            tool_response_str = json.dumps(processed_tool_response)
             redis_conn.set(redis_key, tool_response_str, ex=1200)
             logger.info(f"Successfully saved tool response to Redis with key: {redis_key}")
 
