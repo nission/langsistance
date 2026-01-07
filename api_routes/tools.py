@@ -161,8 +161,8 @@ async def update_tool(request: ToolUpdateRequest,  http_request:  Request):
     if request.title is not None and (not request.title or len(request.title) > 100):
         errors.append("title must be between 1 and 100 characters")
 
-    if request.description is not None and (not request.description or len(request.description) > 5000):
-        errors.append("description must be between 1 and 5000 characters")
+    if request.description is not None and len(request.description) > 5000:
+        errors.append("description must be no more than 5000 characters")
 
     if request.url is not None and (not request.url or len(request.url) > 1000):
         errors.append("url must be between 1 and 1000 characters")
