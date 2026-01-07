@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from typing import List
 import json
 import yaml
+import re
 
 from .models import (
     ToolAndKnowledgeCreateRequest, ToolAndKnowledgeCreateResponse,
@@ -1026,6 +1027,20 @@ async def create_tool_from_openapi(request: OpenAPISpecRequest, http_request: Re
         base_url = ""
         if 'servers' in openapi_spec and len(openapi_spec['servers']) > 0:
             base_url = openapi_spec['servers'][0].get('url', '')
+
+        # 验证base_url是否为标准的HTTP域名格式
+        if base_url:
+            # 验证URL格式的标准正则表达式
+            url_pattern = r'^https?://[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](\.[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9])*(:\d+)?(/.*)?$'
+            if not re.match(url_pattern, base_url):
+                logger.error(f"Invalid base_url format: {base_url}")
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "success": False,
+                        "message": f"Invalid base_url format: {base_url}. Must be a standard HTTP/HTTPS domain."
+                    }
+                )
 
         # 提取第一个路径作为工具URL的一部分
         path_url = ""
