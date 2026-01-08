@@ -71,7 +71,7 @@ class Provider:
             return "http://localhost", False
         return url, True
 
-    def respond(self, tools, history, verbose=True, callback_handler=None):
+    def respond(self, tools, history, verbose=True):
         """
         Use the choosen provider to generate text.
         """
@@ -79,7 +79,7 @@ class Provider:
         self.logger.info(f"Using provider: {self.provider_name} at {self.server_ip}")
         self.logger.info(f"history:{history}")
         try:
-            thought = llm(tools, history, verbose, callback_handler)
+            thought = llm(tools, history, verbose)
         except KeyboardInterrupt:
             self.logger.warning("User interrupted the operation with Ctrl+C")
             return "Operation interrupted by user. REQUEST_EXIT"
@@ -213,7 +213,7 @@ class Provider:
         thought = completion.choices[0].message
         return thought.content
 
-    def openai_fn(self, tools, history, verbose=False, callback_handler=None):
+    def openai_fn(self, tools, history, verbose=False):
         """
         Use openai to generate text.
         """
@@ -222,8 +222,7 @@ class Provider:
         llm = ChatOpenAI(
             model=self.model,
             api_key=self.api_key,
-            temperature=0,
-            callbacks=[callback_handler] if callback_handler else None
+            temperature=0
         )
 
         # 定义一个提示模板，通常包含系统消息、历史消息、用户输入和Agent的临时思考区域
