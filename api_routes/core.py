@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, FileResponse, EventSourceResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 import os
 import uuid
 import asyncio
@@ -223,7 +223,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
                     interaction_ref.save_session()
 
         # 返回EventSourceResponse
-        return EventSourceResponse(event_generator())
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     @router.get("/screenshot")
     async def get_screenshot():
