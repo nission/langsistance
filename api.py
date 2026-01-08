@@ -160,7 +160,7 @@ async def create_agent():
     )
     return GeneralAgent(
         name="General",
-        prompt_path=f"prompts/javis/general_agent.txt",
+        prompt_path=f"prompts/jarvis/general_agent.txt",
         provider=provider, verbose=False
     )
 
