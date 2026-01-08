@@ -293,5 +293,5 @@ class Agent():
     def create_agent(self, user_id, prompt, query_id, callback_handler):
         pass
 
-    def invoke_agent(self, prompt):
+    def invoke_agent(self, agent):
         pass
