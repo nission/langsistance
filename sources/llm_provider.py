@@ -473,6 +473,7 @@ class Provider:
             model=self.model,
             api_key=self.api_key,
             temperature=0,
+            streaming=True,
             callbacks=[callback_handler] if callback_handler else None
         )
 
