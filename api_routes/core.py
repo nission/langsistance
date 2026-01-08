@@ -264,6 +264,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
         async def run_agent():
             try:
+                app_logger.info(f"invoke agent start")
                 general_agent.invoke_agent(openai_agent)
             except Exception as invoke_e:
                 app_logger.error(f"invoke agent fail. An error occurred: {str(e)}")
