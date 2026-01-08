@@ -256,6 +256,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
         try:
             general_agent = await create_agent_func()
             openai_agent = await general_agent.create_agent(user_id, request.query, request.query_id)
+            app_logger.info(f"type of openai agent: {type(openai_agent)}")
         except Exception as e:
             app_logger.error(f"create agent fail. An error occurred: {str(e)}")
             # sys.exit(1)  # 不应该在路由中退出应用
