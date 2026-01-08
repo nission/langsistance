@@ -280,7 +280,7 @@ class GeneralAgent(Agent):
         self.logger.info(f"memory.get():{self.memory.get()}")
         self.tools = await self.get_tools()
 
-        return self.llm.openai_create(self.tools, self.memory.get()),
+        return self.llm.openai_create(self.tools, self.memory.get())
 
 
     def invoke_agent(self, agent):
