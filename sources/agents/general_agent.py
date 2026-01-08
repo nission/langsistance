@@ -243,7 +243,7 @@ class GeneralAgent(Agent):
         except Exception as e:
             raise Exception(f"get_tool failed: {str(e)}") from e
 
-    async def process(self,user_id, prompt, query_id, speech_module) -> str | tuple[str, str]:
+    async def process(self,user_id, prompt, query_id, speech_module, callback_handler=None) -> str | tuple[str, str]:
         if not self.enabled:
             return "general Agent is disabled."
         self.knowledgeTool = get_knowledge_tool(user_id,  prompt)
@@ -260,7 +260,7 @@ class GeneralAgent(Agent):
         while working == True:
             self.logger.info(f"tools:{self.tools}")
             animate_thinking("Thinking...", color="status")
-            answer, reasoning = await self.llm_request()
+            answer, reasoning = await self.llm_request(callback_handler)
             # exec_success, _ = self.execute_modules(answer)
             # answer = self.remove_blocks(answer)
             self.last_answer = answer

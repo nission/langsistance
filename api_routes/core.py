@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, EventSourceResponse
 import os
 import uuid
+import asyncio
 
 from sources.schemas import QueryResponse
 from sources.logger import Logger
 from api_routes.models import QueryRequest, QuestionRequest
 from sources.knowledge.knowledge import get_knowledge_tool
 from sources.user.passport import verify_firebase_token, check_and_increase_usage
+from sources.callbacks.sse_callback import SSECallbackHandler
 
 router = APIRouter()
 
@@ -125,6 +127,103 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             app_logger.info("Processing finished")
             if config_ref.getboolean('MAIN', 'save_session'):
                 interaction_ref.save_session()
+
+    @router.post("/query_stream")
+    async def process_query_stream(request: QueryRequest, http_request: Request):
+        app_logger.info(f"Processing streaming query: {request.query}")
+        app_logger.info("Streaming processing start begin")
+
+        auth_header = http_request.headers.get("Authorization")
+        user = verify_firebase_token(auth_header)
+
+        user_id = user['uid']
+
+        allowed = check_and_increase_usage(user_id)
+        if not allowed:
+            return JSONResponse(status_code=429, content="Daily API usage limit exceeded (100/day)")
+
+        # 如果没有提供 query_id，自动生成一个
+        if not request.query_id:
+            request.query_id = str(uuid.uuid4())
+
+        if is_generating_flag:
+            app_logger.warning("Another query is being processed, please wait.")
+            query_resp = QueryResponse(
+                done="false",
+                answer="",
+                reasoning="",
+                agent_name="Unknown",
+                success=False,
+                blocks={},
+                status="Ready",
+                uid=str(uuid.uuid4())
+            )
+            return JSONResponse(status_code=429, content=query_resp.jsonify())
+
+        # 创建一个队列用于流式传输
+        queue = asyncio.Queue()
+        callback_handler = SSECallbackHandler(queue)
+
+        async def event_generator():
+            try:
+                # 启动处理查询的任务
+                task = asyncio.create_task(
+                    think_wrapper_func(user_id, interaction_ref, request.query, request.query_id, callback_handler)
+                )
+
+                # 从队列中获取并流式传输令牌
+                while True:
+                    token = await queue.get()
+                    if token == "[DONE]":
+                        break
+                    elif token.startswith("[ERROR]"):
+                        yield f"data: {token}\n\n"
+                        break
+                    else:
+                        yield f"data: {token}\n\n"
+                    queue.task_done()
+
+                # 等待处理任务完成
+                await task
+
+                # 生成最终的完整响应
+                # if interaction_ref.current_agent:
+                #     blocks_json = {f'{i}': block.jsonify() for i, block in enumerate(interaction_ref.current_agent.get_blocks_result())}
+                #     final_response = {
+                #         "done": "true",
+                #         "answer": interaction_ref.last_answer,
+                #         "reasoning": interaction_ref.last_reasoning,
+                #         "agent_name": interaction_ref.current_agent.agent_name,
+                #         "success": interaction_ref.last_success,
+                #         "blocks": blocks_json,
+                #         "status": "Completed",
+                #         "uid": str(uuid.uuid4())
+                #     }
+                # else:
+                #     final_response = {
+                #         "done": "true",
+                #         "answer": "Error: No current agent",
+                #         "reasoning": "",
+                #         "agent_name": "Unknown",
+                #         "success": False,
+                #         "blocks": {},
+                #         "status": "Error",
+                #         "uid": str(uuid.uuid4())
+                #     }
+                #
+                # yield f"data: {final_response}\n\n"
+                yield "data: [STREAM_DONE]\n\n"
+
+            except Exception as e:
+                app_logger.error(f"An error occurred in streaming: {str(e)}")
+                yield f"data: [ERROR] {str(e)}\n\n"
+            finally:
+                app_logger.info("Streaming processing finished")
+                if config_ref.getboolean('MAIN', 'save_session'):
+                    interaction_ref.save_session()
+
+        # 返回EventSourceResponse
+        return EventSourceResponse(event_generator())
 
     @router.get("/screenshot")
     async def get_screenshot():

@@ -130,7 +130,7 @@ class Agent():
         self.status_message = "Stopped"
     
     @abstractmethod
-    def process(self, user_id, prompt, query_id, speech_module) -> str:
+    def process(self, user_id, prompt, query_id, speech_module, callback_handler=None) -> str:
         """
         abstract method, implementation in child class.
         Process the prompt and return the answer of the agent.
@@ -159,7 +159,7 @@ class Agent():
         end_idx = text.rfind(end_tag)+8
         return text[start_idx:end_idx]
     
-    async def llm_request(self) -> Tuple[str, str]:
+    async def llm_request(self, callback_handler=None) -> Tuple[str, str]:
         """
         Asynchronously ask the LLM to process the prompt.
         """
@@ -167,16 +167,16 @@ class Agent():
         self.agentLogger.info("LLM request")
         loop = asyncio.get_event_loop()
         self.agentLogger.info("LLM request loop")
-        return await loop.run_in_executor(self.executor, self.sync_llm_request)
+        return await loop.run_in_executor(self.executor, lambda: self.sync_llm_request(callback_handler))
     
-    def sync_llm_request(self) -> Tuple[str, str]:
+    def sync_llm_request(self, callback_handler=None) -> Tuple[str, str]:
         """
         Ask the LLM to process the prompt and return the answer and the reasoning.
         """
         self.agentLogger.info(f"self.memory:{self.memory}")
         memory = self.memory.get()
         self.agentLogger.info(f"memory:{memory}")
-        thought = self.llm.respond(self.tools, memory, self.verbose)
+        thought = self.llm.respond(self.tools, memory, self.verbose, callback_handler)
 
         reasoning = self.extract_reasoning_text(thought)
         answer = self.remove_reasoning_text(thought)

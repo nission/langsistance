@@ -128,13 +128,13 @@ is_generating = False
 query_resp_history = []
 
 # Helper function for query processing
-async def think_wrapper(user_id, interaction, query, query_id):
+async def think_wrapper(user_id, interaction, query, query_id, callback_handler=None):
     try:
         success = False
         interaction.last_query = query
         interaction.query_id = query_id
         logger.info("Agents request is being processed")
-        success = await interaction.think(user_id)
+        success = await interaction.think(user_id, callback_handler)
         if not success:
             interaction.last_answer = "Error: No answer from agent"
             interaction.last_reasoning = "Error: No reasoning from agent"
