@@ -467,8 +467,8 @@ class Provider:
         """
         Use openai to generate text.
         """
-        self.logger.info(f"tools:{tools}")
-        self.logger.info(f"history:{history}")
+        self.logger.info(f"create agent tools:{tools}")
+        self.logger.info(f"create agent history:{history}")
         llm = ChatOpenAI(
             model=self.model,
             api_key=self.api_key,
@@ -485,6 +485,7 @@ class Provider:
         """
         Use openai to generate text.
         """
+        self.logger.info(f"invoke agent history:{history}")
         try:
             agent.invoke({"messages": [{"role": "user", "content": history[0]["content"]}]})
         except Exception as e:

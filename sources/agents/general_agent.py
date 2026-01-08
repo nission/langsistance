@@ -285,7 +285,7 @@ class GeneralAgent(Agent):
 
     async def invoke_agent(self, agent):
         try:
-            self.llm.openai_invoke(agent, self.memory)
+            self.llm.openai_invoke(agent, self.memory.get())
         except Exception as e:
             raise e
 
