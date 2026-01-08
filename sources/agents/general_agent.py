@@ -269,7 +269,7 @@ class GeneralAgent(Agent):
                 working = False
         return answer, reasoning
 
-    async def create_agent(self, user_id, prompt, query_id, callback_handler):
+    async def create_agent(self, user_id, prompt, query_id):
         self.knowledgeTool = get_knowledge_tool(user_id,  prompt)
         user_prompt = self.generate_user_prompt(prompt, user_id, query_id)
         system_prompt = self.generate_system_prompt()
@@ -280,7 +280,7 @@ class GeneralAgent(Agent):
         self.logger.info(f"memory.get():{self.memory.get()}")
         self.tools = await self.get_tools()
 
-        return self.llm.openai_create(self.tools, self.memory.get(), callback_handler),
+        return self.llm.openai_create(self.tools, self.memory.get()),
 
 
     def invoke_agent(self, agent):

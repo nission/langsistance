@@ -290,7 +290,7 @@ class Agent():
                     tool.save_block(blocks, save_path)
         return True, feedback
 
-    def create_agent(self, user_id, prompt, query_id, callback_handler):
+    def create_agent(self, user_id, prompt, query_id):
         pass
 
     def invoke_agent(self, agent):
