@@ -266,6 +266,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             try:
                 app_logger.info(f"invoke agent start")
                 general_agent.invoke_agent(openai_agent)
+                app_logger.info(f"invoke agent finish")
             except Exception as invoke_e:
                 app_logger.error(f"invoke agent fail. An error occurred: {str(e)}")
                 handler.queue.put_nowait(f"[ERROR] {invoke_e}")
@@ -277,6 +278,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
             while True:
                 token = await handler.queue.get()
+                app_logger.info(f"invoke agent token:{token}")
                 if token == "[DONE]":
                     yield "event: end\ndata: [DONE]\n\n"
                     break
