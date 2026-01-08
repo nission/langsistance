@@ -283,7 +283,7 @@ class GeneralAgent(Agent):
         return self.llm.openai_create(self.tools, self.memory.get(), callback_handler),
 
 
-    async def invoke_agent(self, agent):
+    def invoke_agent(self, agent):
         self.logger.info(f"invoke agent memory:{self.memory.get()}")
         try:
             self.llm.openai_invoke(agent, self.memory.get())
