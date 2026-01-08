@@ -253,7 +253,7 @@ class GeneralAgent(Agent):
         self.memory.reset([])
         self.memory.push('user', user_prompt)
         self.memory.push('system', system_prompt)
-        self.logger.info(f"memory:{self.memory}")
+
         self.logger.info(f"memory.get():{self.memory.get()}")
         self.tools = await self.get_tools()
         working = True
@@ -268,6 +268,26 @@ class GeneralAgent(Agent):
             if len(self.blocks_result) == 0:
                 working = False
         return answer, reasoning
+
+    async def create_agent(self, user_id, prompt, query_id, callback_handler):
+        self.knowledgeTool = get_knowledge_tool(user_id,  prompt)
+        user_prompt = self.generate_user_prompt(prompt, user_id, query_id)
+        system_prompt = self.generate_system_prompt()
+        self.memory.reset([])
+        self.memory.push('user', user_prompt)
+        self.memory.push('system', system_prompt)
+
+        self.logger.info(f"memory.get():{self.memory.get()}")
+        self.tools = await self.get_tools()
+
+        return self.llm.openai_create(self.tools, self.memory, callback_handler),
+
+
+    async def invoke_agent(self, agent):
+        try:
+            self.llm.openai_invoke(agent, self.memory)
+        except Exception as e:
+            raise e
 
 if __name__ == "__main__":
     pass

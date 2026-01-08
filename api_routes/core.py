@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 import os
 import uuid
+import json
+import asyncio
 
 from sources.schemas import QueryResponse
 from sources.logger import Logger
 from api_routes.models import QueryRequest, QuestionRequest
 from sources.knowledge.knowledge import get_knowledge_tool
 from sources.user.passport import verify_firebase_token, check_and_increase_usage
+from sources.callback.sse_callback import SSECallbackHandler
 
 router = APIRouter()
 
-def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, config_ref, is_generating_flag, think_wrapper_func):
+def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, config_ref, is_generating_flag, think_wrapper_func, create_agent_func):
     """注册核心路由并传递所需的依赖"""
     
     @router.get("/latest_answer")
@@ -220,5 +223,71 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
                     "message": f"Internal server error: {str(e)}"
                 }
             )
+
+    @router.post("/query_stream")
+    async def process_query(request: QueryRequest, http_request: Request):
+        app_logger.info(f"Processing query_stream: {request.query}")
+
+        auth_header = http_request.headers.get("Authorization")
+        user = verify_firebase_token(auth_header)
+
+        user_id = user['uid']
+
+        allowed = check_and_increase_usage(user_id)
+        if not allowed:
+            return JSONResponse(status_code=429, content="Daily API usage limit exceeded (100/day)")
+
+        query_resp = {
+            "done" : "false",
+            "success" : "false"
+        }
+
+        # 如果没有提供 query_id，自动生成一个
+        if not request.query_id:
+            app_logger.warning("query id is none.")
+            return JSONResponse(status_code=429, content=json.dumps(query_resp))
+
+        if is_generating_flag:
+            app_logger.warning("Another query is being processed, please wait.")
+            return JSONResponse(status_code=429, content=json.dumps(query_resp))
+
+
+
+        try:
+            general_agent = await create_agent_func()
+            handler = SSECallbackHandler()
+            openai_agent = await general_agent.create_agent(user_id, request.query, request.query_id, handler)
+        except Exception as e:
+            app_logger.error(f"create agent fail. An error occurred: {str(e)}")
+            # sys.exit(1)  # 不应该在路由中退出应用
+            return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
+        async def run_agent():
+            try:
+                general_agent.invoke_agent(openai_agent)
+            except Exception as e:
+                handler.queue.put_nowait(f"[ERROR] {e}")
+            finally:
+                handler.queue.put_nowait("[DONE]")
+
+        async def event_stream():
+            task = asyncio.create_task(run_agent())
+
+            while True:
+                token = await handler.queue.get()
+                if token == "[DONE]":
+                    yield "event: end\ndata: [DONE]\n\n"
+                    break
+                elif token.startswith("[ERROR]"):
+                    yield f"event: error\ndata: {token}\n\n"
+                else:
+                    yield f"data: {token}\n\n"
+
+            await task
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+        )
 
     return router

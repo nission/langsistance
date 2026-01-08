@@ -482,13 +482,8 @@ class AgentRouter:
         """
         
         try:
-            # 获取用户ID，这里假设使用默认用户ID，您可能需要根据实际情况修改
-
-            # 如果没有找到匹配的知识，则使用默认的选择方法
-            pretty_print("No matching knowledge found, using default agent selection.", color="warning")
             return self.agents[0], text
         except Exception as e:
-            pretty_print(f"Error building agent from knowledge base: {str(e)}", color="failure")
             self.logger.error(f"Error building agent from knowledge base: {str(e)}")
             # 出错时回退到默认的选择方法
             return self.agents[0], text
