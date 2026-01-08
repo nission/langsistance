@@ -286,7 +286,7 @@ class GeneralAgent(Agent):
     def invoke_agent(self, agent):
         self.logger.info(f"invoke agent memory:{self.memory.get()}")
         try:
-            self.llm.openai_invoke(agent, self.memory.get())
+            return self.llm.openai_invoke(agent, self.memory.get())
         except Exception as e:
             raise e
 

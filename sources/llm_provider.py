@@ -487,7 +487,7 @@ class Provider:
         """
         self.logger.info(f"invoke agent history:{history}")
         try:
-            agent.astream({"messages": [{"role": "user", "content": history[0]["content"]}]})
+            return agent.astream({"messages": [{"role": "user", "content": history[0]["content"]}]})
         except Exception as e:
             raise e
 
