@@ -180,7 +180,7 @@ class GeneralAgent(Agent):
                 if tool_info:
 
                     # 动态创建工具函数
-                    def dynamic_tool_function(user_id: str, query_id: str, params: str):
+                    async def dynamic_tool_function(user_id: str, query_id: str, params: str):
                         self.logger.info(f"user id is {user_id} - query id is {query_id} - param is {params}")
                         try:
                             # 连接Redis
