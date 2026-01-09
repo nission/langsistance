@@ -11,10 +11,11 @@ class SSECallbackHandler(AsyncCallbackHandler):
 
     async def on_llm_new_token(self, token: str, **kwargs) -> None:
         """每个 token 生成时触发 - 最重要！"""
-        await self.queue.put({
-            'type': 'token',
-            'content': token
-        })
+        if token and token.strip():
+            await self.queue.put({
+                'type': 'token',
+                'content': token
+            })
 
     async def on_tool_start(
             self,
@@ -35,6 +36,13 @@ class SSECallbackHandler(AsyncCallbackHandler):
         await self.queue.put({
             'type': 'tool_end',
             'output': output
+        })
+
+    async def on_tool_error(self, error: Exception, **kwargs) -> None:
+        """工具错误处理"""
+        await self.queue.put({
+            'type': 'error',
+            'message': f"Tool error: {str(error)}"
         })
 
     async def on_llm_error(self, error: Exception, **kwargs) -> None:
