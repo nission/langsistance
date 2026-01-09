@@ -463,7 +463,7 @@ class Provider:
             raise APIError(f"API error occurred: {str(e)}") from e
         return None
 
-    def openai_create(self, tools, history, verbose=False):
+    def openai_create(self, tools, history, callback_handler=None, verbose=False):
         """
         Use openai to generate text.
         """
@@ -473,7 +473,8 @@ class Provider:
             model=self.model,
             api_key=self.api_key,
             temperature=0,
-            streaming=True
+            streaming=True,
+            callbacks=[callback_handler] if callback_handler else None
         )
 
         try:
@@ -487,7 +488,7 @@ class Provider:
         """
         self.logger.info(f"invoke agent history:{history}")
         try:
-            return agent.astream({"messages": [{"role": "user", "content": history[0]["content"]}]})
+            agent.invoke({"messages": [{"role": "user", "content": history[0]["content"]}]})
         except Exception as e:
             raise e
 

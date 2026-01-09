@@ -255,22 +255,42 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
         try:
             general_agent = await create_agent_func()
-            openai_agent = await general_agent.create_agent(user_id, request.query, request.query_id)
-            app_logger.info(f"type of openai agent: {type(openai_agent)}")
+            handler = SSECallbackHandler()
+            openai_agent = await general_agent.create_agent(user_id, request.query, request.query_id, handler)
         except Exception as e:
             app_logger.error(f"create agent fail. An error occurred: {str(e)}")
             # sys.exit(1)  # 不应该在路由中退出应用
             return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
         async def run_agent():
-            async for chunk in general_agent.invoke_agent(openai_agent):
-                if "output" in chunk:
-                    yield f"data: {json.dumps({'content': chunk['output']})}\n\n"
+            try:
+                app_logger.info(f"invoke agent start")
+                general_agent.invoke_agent(openai_agent)
+                app_logger.info(f"invoke agent finish")
+            except Exception as invoke_e:
+                app_logger.error(f"invoke agent fail. An error occurred: {str(e)}")
+                handler.queue.put_nowait(f"[ERROR] {invoke_e}")
+            finally:
+                handler.queue.put_nowait("[DONE]")
 
-            yield f"data: {json.dumps({'type': 'end'})}\n\n"
+        async def event_stream():
+            task = asyncio.create_task(run_agent())
+
+            while True:
+                token = await handler.queue.get()
+                app_logger.info(f"invoke agent token:{token}")
+                if token == "[DONE]":
+                    yield "event: end\ndata: [DONE]\n\n"
+                    break
+                elif token.startswith("[ERROR]"):
+                    yield f"event: error\ndata: {token}\n\n"
+                else:
+                    yield f"data: {token}\n\n"
+
+            await task
 
         return StreamingResponse(
-            run_agent(),
+            event_stream(),
             media_type="text/event-stream",
         )
 

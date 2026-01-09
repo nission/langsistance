@@ -208,7 +208,6 @@ class GeneralAgent(Agent):
                             while elapsed < timeout:
                                 response_value = redis_conn.get(response_key)
                                 self.logger.info(f"tool response:{response_value}")
-                                self.logger.info(f"tool response:{type(response_value)}")
                                 if response_value is not None:
                                     # 成功获取到响应值
                                     return response_value
@@ -270,7 +269,7 @@ class GeneralAgent(Agent):
                 working = False
         return answer, reasoning
 
-    async def create_agent(self, user_id, prompt, query_id):
+    async def create_agent(self, user_id, prompt, query_id, callback_handler):
         self.knowledgeTool = get_knowledge_tool(user_id,  prompt)
         user_prompt = self.generate_user_prompt(prompt, user_id, query_id)
         system_prompt = self.generate_system_prompt()
@@ -281,13 +280,13 @@ class GeneralAgent(Agent):
         self.logger.info(f"memory.get():{self.memory.get()}")
         self.tools = await self.get_tools()
 
-        return self.llm.openai_create(self.tools, self.memory.get())
+        return self.llm.openai_create(self.tools, self.memory.get(), callback_handler)
 
 
     def invoke_agent(self, agent):
         self.logger.info(f"invoke agent memory:{self.memory.get()}")
         try:
-            return self.llm.openai_invoke(agent, self.memory.get())
+            self.llm.openai_invoke(agent, self.memory.get())
         except Exception as e:
             raise e
 
