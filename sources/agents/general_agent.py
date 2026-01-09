@@ -216,7 +216,6 @@ class GeneralAgent(Agent):
                                 # 等待1秒后再次尝试
                                 time.sleep(interval)
                                 elapsed += interval
-                                self.logger.info(f"elapsed response is:{elapsed}")
 
                             # 超时未获取到响应值
                             return None
