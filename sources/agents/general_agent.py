@@ -208,12 +208,15 @@ class GeneralAgent(Agent):
                             while elapsed < timeout:
                                 response_value = redis_conn.get(response_key)
                                 self.logger.info(f"tool response:{response_value}, and type:{type(response_value)}")
+
                                 if response_value is not None:
                                     # 成功获取到响应值
+                                    self.logger.info(f"tool response is not none:{response_value}")
                                     return response_value
                                 # 等待1秒后再次尝试
                                 time.sleep(interval)
                                 elapsed += interval
+                                self.logger.info(f"elapsed response is:{elapsed}")
 
                             # 超时未获取到响应值
                             return None
