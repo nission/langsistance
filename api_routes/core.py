@@ -263,12 +263,12 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
                     await general_agent.invoke_agent(openai_agent, handler)
                     await queue.put({'type': 'end'})
                     app_logger.info(f"invoke agent finish")
-                except Exception as invoke_e:
+                except Exception as e:
                     app_logger.error(f"invoke agent fail. An error occurred: {str(e)}")
                     await queue.put({'type': 'error', 'message': str(e)})
                     await queue.put({'type': 'end'})
                 finally:
-                    handler.queue.put_nowait("[DONE]")
+                    handler.queue.put_nowait({'type': 'done'})
 
             task = asyncio.create_task(run_agent())
 

@@ -482,13 +482,13 @@ class Provider:
         except Exception as e:
             raise Exception(f"OpenAI API error: {str(e)}") from e
 
-    def openai_invoke(self, agent, history, callback_handler=None):
+    async def openai_invoke(self, agent, history, callback_handler=None):
         """
         Use openai to generate text.
         """
         self.logger.info(f"invoke agent history:{history}")
         try:
-            agent.ainvoke({"messages": [{"role": "user", "content": history[0]["content"]}]}, config={"callbacks": [callback_handler]})
+            await agent.ainvoke({"messages": [{"role": "user", "content": history[0]["content"]}]}, config={"callbacks": [callback_handler]})
         except Exception as e:
             raise e
 
