@@ -251,46 +251,40 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             app_logger.warning("Another query is being processed, please wait.")
             return JSONResponse(status_code=429, content=json.dumps(query_resp))
 
-
-
-        try:
+        async def generate():
             general_agent = await create_agent_func()
-            handler = SSECallbackHandler()
+            queue = asyncio.Queue()
+            handler = SSECallbackHandler(queue)
             openai_agent = await general_agent.create_agent(user_id, request.query, request.query_id, handler)
-        except Exception as e:
-            app_logger.error(f"create agent fail. An error occurred: {str(e)}")
-            # sys.exit(1)  # 不应该在路由中退出应用
-            return JSONResponse(status_code=500, content={"error": "Internal server error"})
 
-        async def run_agent():
-            try:
-                app_logger.info(f"invoke agent start")
-                general_agent.invoke_agent(openai_agent)
-                app_logger.info(f"invoke agent finish")
-            except Exception as invoke_e:
-                app_logger.error(f"invoke agent fail. An error occurred: {str(e)}")
-                handler.queue.put_nowait(f"[ERROR] {invoke_e}")
-            finally:
-                handler.queue.put_nowait("[DONE]")
+            async def run_agent():
+                try:
+                    app_logger.info(f"invoke agent start")
+                    await general_agent.invoke_agent(openai_agent, handler)
+                    await queue.put({'type': 'end'})
+                    app_logger.info(f"invoke agent finish")
+                except Exception as invoke_e:
+                    app_logger.error(f"invoke agent fail. An error occurred: {str(e)}")
+                    await queue.put({'type': 'error', 'message': str(e)})
+                    await queue.put({'type': 'end'})
+                finally:
+                    handler.queue.put_nowait("[DONE]")
 
-        async def event_stream():
             task = asyncio.create_task(run_agent())
 
-            while True:
-                token = await handler.queue.get()
-                app_logger.info(f"invoke agent token:{token}")
-                if token == "[DONE]":
-                    yield "event: end\ndata: [DONE]\n\n"
-                    break
-                elif token.startswith("[ERROR]"):
-                    yield f"event: error\ndata: {token}\n\n"
-                else:
-                    yield f"data: {token}\n\n"
+            try:
+                while True:
+                    event = await queue.get()
+                    yield f"data: {json.dumps(event)}\n\n"
 
-            await task
+                    if event.get('type') == 'end':
+                        break
+            finally:
+                if not task.done():
+                    task.cancel()
 
         return StreamingResponse(
-            event_stream(),
+            generate(),
             media_type="text/event-stream",
         )
 

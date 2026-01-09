@@ -285,10 +285,10 @@ class GeneralAgent(Agent):
         return self.llm.openai_create(self.tools, self.memory.get(), callback_handler)
 
 
-    def invoke_agent(self, agent):
+    def invoke_agent(self, agent, callback_handler):
         self.logger.info(f"invoke agent memory:{self.memory.get()}")
         try:
-            self.llm.openai_invoke(agent, self.memory.get())
+            self.llm.openai_invoke(agent, self.memory.get(), callback_handler)
         except Exception as e:
             raise e
 

@@ -1,16 +1,45 @@
+from langchain_core.callbacks.base import AsyncCallbackHandler
 import asyncio
-from langchain_core.callbacks.base import BaseCallbackHandler
 
 
-class SSECallbackHandler(BaseCallbackHandler):
-    def __init__(self):
-        self.queue = asyncio.Queue()
+class SSECallbackHandler(AsyncCallbackHandler):
+    """自定义异步回调处理器"""
 
-    def on_llm_new_token(self, token: str, **kwargs):
-        self.queue.put_nowait(token)
+    def __init__(self, queue: asyncio.Queue):
+        super().__init__()
+        self.queue = queue
 
-    def on_llm_end(self, response, **kwargs):
-        self.queue.put_nowait("[DONE]")
+    async def on_llm_new_token(self, token: str, **kwargs) -> None:
+        """每个 token 生成时触发 - 最重要！"""
+        await self.queue.put({
+            'type': 'token',
+            'content': token
+        })
 
-    def on_llm_error(self, error, **kwargs):
-        self.queue.put_nowait(f"[ERROR] {error}")
+    async def on_tool_start(
+            self,
+            serialized: dict,
+            input_str: str,
+            **kwargs
+    ) -> None:
+        """工具调用开始"""
+        tool_name = serialized.get('name', 'unknown')
+        await self.queue.put({
+            'type': 'tool_start',
+            'tool': tool_name,
+            'input': input_str
+        })
+
+    async def on_tool_end(self, output: str, **kwargs) -> None:
+        """工具调用结束"""
+        await self.queue.put({
+            'type': 'tool_end',
+            'output': output
+        })
+
+    async def on_llm_error(self, error: Exception, **kwargs) -> None:
+        """LLM 错误处理"""
+        await self.queue.put({
+            'type': 'error',
+            'message': str(error)
+        })
