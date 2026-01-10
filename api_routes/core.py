@@ -274,7 +274,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
                 while True:
                     event = await queue.get()
                     if event['type'] == 'token':
-                        yield f"data: {event['content']}\n\n"
+                        yield f"data:{event['content']}\n\n"
 
                     if event['type'] == 'end':
                         break
