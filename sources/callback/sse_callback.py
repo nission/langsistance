@@ -33,10 +33,11 @@ class SSECallbackHandler(AsyncCallbackHandler):
 
     async def on_tool_end(self, output: str, **kwargs) -> None:
         """工具调用结束"""
-        await self.queue.put({
-            'type': 'tool_end',
-            'output': output
-        })
+        print(f"[QUEUE PUT] type={type(output)}")
+        # await self.queue.put({
+        #     'type': 'tool_end',
+        #     'output': output
+        # })
 
     async def on_tool_error(self, error: Exception, **kwargs) -> None:
         """工具错误处理"""
@@ -50,4 +51,20 @@ class SSECallbackHandler(AsyncCallbackHandler):
         await self.queue.put({
             'type': 'error',
             'message': str(error)
+        })
+
+    async def on_chain_end(self, output, **kwargs) -> None:
+        """链结束时触发"""
+        print(f"[QUEUE PUT] type={type(output)}")
+        # await self.queue.put({
+        #     'type': 'chain_end',
+        #     'outputs': output  # 这里可能包含 ToolMessage 对象
+        # })
+
+    async def on_chain_error(self, error, **kwargs) -> None:
+        """链错误时触发"""
+        await self.queue.put({
+            'type': 'error',
+            'message': str(error),
+            'details': kwargs  # 这里可能包含复杂对象
         })
