@@ -77,5 +77,5 @@ class SSECallbackHandler(AsyncCallbackHandler):
         print(f"[QUEUE PUT] agent end type={type(finish)}, outputs={finish}")
         await self.queue.put({
             'type': 'end',
-            'outputs': ''
+            'content': ''
         })
