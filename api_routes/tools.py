@@ -790,8 +790,6 @@ async def save_tool_response(request: ToolResponseRequest, http_request: Request
 
     user_id = user['uid']
 
-    logger.info(f"Saving tool response for user: {user_id} with query_id: {request.query_id} - tool response: {request.tool_response}")
-
     try:
         # 参数校验
         if not request.query_id:
