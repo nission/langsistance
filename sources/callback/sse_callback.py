@@ -24,8 +24,7 @@ class SSECallbackHandler(AsyncCallbackHandler):
             **kwargs
     ) -> None:
         """工具调用开始"""
-        tool_name = serialized.get('name', 'unknown')
-        print(f"[QUEUE PUT] type=tool_start, name={tool_name}, input={input_str}")
+        #tool_name = serialized.get('name', 'unknown')
         # await self.queue.put({
         #     'type': 'tool_start',
         #     'tool': tool_name,
@@ -34,7 +33,6 @@ class SSECallbackHandler(AsyncCallbackHandler):
 
     async def on_tool_end(self, output: str, **kwargs) -> None:
         """工具调用结束"""
-        print(f"[QUEUE PUT] tool end type={type(output)}")
         # await self.queue.put({
         #     'type': 'tool_end',
         #     'output': output
@@ -74,7 +72,6 @@ class SSECallbackHandler(AsyncCallbackHandler):
         # })
 
     async def on_agent_finish(self, finish, **kwargs):
-        print(f"[QUEUE PUT] agent end type={type(finish)}, outputs={finish}")
         await self.queue.put({
             'type': 'end',
             'content': ''

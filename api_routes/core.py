@@ -259,10 +259,8 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
             async def run_agent():
                 try:
-                    app_logger.info(f"invoke agent start")
                     await general_agent.invoke_agent(openai_agent, handler)
                     await queue.put({'type': 'end', 'content': ''})
-                    app_logger.info(f"invoke agent finish")
                 except Exception as e:
                     app_logger.error(f"invoke agent fail. An error occurred: {str(e)}")
                     await queue.put({'type': 'error', 'message': str(e)})
@@ -275,10 +273,10 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             try:
                 while True:
                     event = await queue.get()
-                    print(f"event: {event}")
-                    yield f"data: {event['content']}\n\n"
+                    if event['type'] == 'token':
+                        yield f"data: {event['content']}\n\n"
 
-                    if event.get('type') == 'end':
+                    if event['type'] == 'end':
                         break
             finally:
                 if not task.done():
