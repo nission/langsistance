@@ -274,8 +274,9 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
                 while True:
                     event = await queue.get()
                     if event['type'] == 'token':
-                        yield f"data:{event['content']}\n\n"
-                        #yield f"data:\n\n\n"
+                        # 将token内容进行JSON编码，确保换行符等特殊字符被正确处理
+                        token_json = json.dumps(event['content'])
+                        yield f"data:{token_json}\n\n"
 
                     if event['type'] == 'end':
                         break
