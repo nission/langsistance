@@ -11,7 +11,7 @@ class SSECallbackHandler(AsyncCallbackHandler):
 
     async def on_llm_new_token(self, token: str, **kwargs) -> None:
         """每个 token 生成时触发 - 最重要！"""
-        if token and token.strip():
+        if token:
             await self.queue.put({
                 'type': 'token',
                 'content': token
