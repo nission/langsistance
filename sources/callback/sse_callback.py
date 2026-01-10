@@ -25,11 +25,12 @@ class SSECallbackHandler(AsyncCallbackHandler):
     ) -> None:
         """工具调用开始"""
         tool_name = serialized.get('name', 'unknown')
-        await self.queue.put({
-            'type': 'tool_start',
-            'tool': tool_name,
-            'input': input_str
-        })
+        print(f"[QUEUE PUT] type=tool_start, name={tool_name}, input={input_str}")
+        # await self.queue.put({
+        #     'type': 'tool_start',
+        #     'tool': tool_name,
+        #     'input': input_str
+        # })
 
     async def on_tool_end(self, output: str, **kwargs) -> None:
         """工具调用结束"""
@@ -58,7 +59,7 @@ class SSECallbackHandler(AsyncCallbackHandler):
         print(f"[QUEUE PUT] chain end type={type(output)}, outputs={output}")
         # await self.queue.put({
         #     'type': 'chain_end',
-        #     'outputs': output  # 这里可能包含 ToolMessage 对象
+        #     'outputs': output
         # })
 
     async def on_chain_error(self, error, **kwargs) -> None:
@@ -67,4 +68,11 @@ class SSECallbackHandler(AsyncCallbackHandler):
             'type': 'error',
             'message': str(error),
             'details': kwargs  # 这里可能包含复杂对象
+        })
+
+    async def on_agent_finish(self, finish, **kwargs):
+        print(f"[QUEUE PUT] agent end type={type(finish)}, outputs={finish}")
+        await self.queue.put({
+            'type': 'end',
+            'outputs': ''
         })

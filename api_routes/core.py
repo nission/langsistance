@@ -275,7 +275,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             try:
                 while True:
                     event = await queue.get()
-                    yield f"data: {json.dumps(event)}\n\n"
+                    yield f"data: {event['content']}\n\n"
 
                     if event.get('type') == 'end':
                         break
