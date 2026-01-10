@@ -42,21 +42,23 @@ class SSECallbackHandler(AsyncCallbackHandler):
 
     async def on_tool_error(self, error: Exception, **kwargs) -> None:
         """工具错误处理"""
-        await self.queue.put({
-            'type': 'error',
-            'message': f"Tool error: {str(error)}"
-        })
+        print(f"[QUEUE PUT] tool error error={error}")
+        # await self.queue.put({
+        #     'type': 'error',
+        #     'message': f"Tool error: {str(error)}"
+        # })
 
     async def on_llm_error(self, error: Exception, **kwargs) -> None:
         """LLM 错误处理"""
-        await self.queue.put({
-            'type': 'error',
-            'message': str(error)
-        })
+        print(f"[QUEUE PUT] llm error error={error}")
+        # await self.queue.put({
+        #     'type': 'error',
+        #     'message': str(error)
+        # })
 
     async def on_chain_end(self, output, **kwargs) -> None:
         """链结束时触发"""
-        print(f"[QUEUE PUT] chain end type={type(output)}, outputs={output}")
+        #print(f"[QUEUE PUT] chain end type={type(output)}, outputs={output}")
         # await self.queue.put({
         #     'type': 'chain_end',
         #     'outputs': output
@@ -64,11 +66,12 @@ class SSECallbackHandler(AsyncCallbackHandler):
 
     async def on_chain_error(self, error, **kwargs) -> None:
         """链错误时触发"""
-        await self.queue.put({
-            'type': 'error',
-            'message': str(error),
-            'details': kwargs  # 这里可能包含复杂对象
-        })
+        print(f"[QUEUE PUT] chain error error={error}")
+        # await self.queue.put({
+        #     'type': 'error',
+        #     'message': str(error),
+        #     'details': kwargs  # 这里可能包含复杂对象
+        # })
 
     async def on_agent_finish(self, finish, **kwargs):
         print(f"[QUEUE PUT] agent end type={type(finish)}, outputs={finish}")
