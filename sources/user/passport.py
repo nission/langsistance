@@ -106,6 +106,7 @@ def verify_firebase_token(auth_header: str):
 
         return decoded_token
     except Exception as e:
+        logger.error(f"Error id token:{id_token}: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
 def seconds_until_end_of_day() -> int:
