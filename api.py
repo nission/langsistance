@@ -151,21 +151,34 @@ async def think_wrapper(user_id, interaction, query, query_id):
         interaction.last_success = False
         raise e
 
+async def create_agent():
+    provider = Provider(
+        provider_name=config["MAIN"]["provider_name"],
+        model=config["MAIN"]["provider_model"],
+        server_address=config["MAIN"]["provider_server_address"],
+        is_local=config.getboolean('MAIN', 'is_local')
+    )
+    return GeneralAgent(
+        name="General",
+        prompt_path=f"prompts/jarvis/general_agent.txt",
+        provider=provider, verbose=False
+    )
+
 # Include route modules (without prefix to maintain original API structure)
 api.include_router(knowledge.router, tags=["knowledge"])
 api.include_router(tools.router, tags=["tools"])
 system_router = system.register_system_routes(logger, interaction, query_resp_history, config)
 api.include_router(system_router, tags=["system"])
-core_router = core.register_core_routes(logger, interaction, query_resp_history, config, is_generating, think_wrapper)
+core_router = core.register_core_routes(logger, interaction, query_resp_history, config, is_generating, think_wrapper, create_agent)
 api.include_router(core_router, tags=["core"])
 # Note: query router is not included as it contained conflicting endpoints and is now empty
 
 if __name__ == "__main__":
     # Print startup info
     if is_running_in_docker():
-        print("[AgenticSeek] Starting in Docker container...")
+        print("[CopiioAI] Starting in Docker container...")
     else:
-        print("[AgenticSeek] Starting on host machine...")
+        print("[CopiioAI] Starting on host machine...")
     
     envport = os.getenv("BACKEND_PORT")
     if envport:

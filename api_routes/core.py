@@ -1,26 +1,30 @@
 #!/usr/bin/env python3
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 import os
 import uuid
+import json
+import asyncio
 
 from sources.schemas import QueryResponse
 from sources.logger import Logger
 from api_routes.models import QueryRequest, QuestionRequest
 from sources.knowledge.knowledge import get_knowledge_tool
+from sources.user.passport import verify_firebase_token, check_and_increase_usage
+from sources.callback.sse_callback import SSECallbackHandler
 
 router = APIRouter()
 
-def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, config_ref, is_generating_flag, think_wrapper_func):
+def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, config_ref, is_generating_flag, think_wrapper_func, create_agent_func):
     """注册核心路由并传递所需的依赖"""
-    
+
     @router.get("/latest_answer")
     async def get_latest_answer():
         app_logger.info("Latest answer endpoint called")
         if interaction_ref.current_agent is None:
             return JSONResponse(status_code=404, content={"error": "No agent available"})
-        
+
         uid = str(uuid.uuid4())
         if not any(q["answer"] == interaction_ref.current_agent.last_answer for q in query_resp_history_ref):
             query_resp = {
@@ -37,15 +41,24 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             interaction_ref.current_agent.last_reasoning = ""
             query_resp_history_ref.append(query_resp)
             return JSONResponse(status_code=200, content=query_resp)
-        
+
         if query_resp_history_ref:
             return JSONResponse(status_code=200, content=query_resp_history_ref[-1])
         return JSONResponse(status_code=404, content={"error": "No answer available"})
 
     @router.post("/query")
-    async def process_query(request: QueryRequest):
+    async def process_query(request: QueryRequest, http_request: Request):
         app_logger.info(f"Processing query: {request.query}")
         app_logger.info("Processing start begin")
+
+        auth_header = http_request.headers.get("Authorization")
+        user = verify_firebase_token(auth_header)
+
+        user_id = user['uid']
+
+        allowed = check_and_increase_usage(user_id)
+        if not allowed:
+            return JSONResponse(status_code=429, content="Daily API usage limit exceeded (100/day)")
 
         # 如果没有提供 query_id，自动生成一个
         if not request.query_id:
@@ -56,22 +69,21 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             answer="",
             reasoning="",
             agent_name="Unknown",
-            success="false",
+            success=False,
             blocks={},
             status="Ready",
             uid=str(uuid.uuid4())
         )
-        
+
         if is_generating_flag:
             app_logger.warning("Another query is being processed, please wait.")
             return JSONResponse(status_code=429, content=query_resp.jsonify())
 
         try:
             # is_generating = True  # Uncomment if needed
-            user_id = 11111111
             # 调用 think_wrapper_func 来处理查询
             success = await think_wrapper_func(user_id, interaction_ref, request.query, request.query_id)
-            
+
             if not success:
                 query_resp.answer = interaction_ref.last_answer
                 query_resp.reasoning = interaction_ref.last_reasoning
@@ -91,9 +103,9 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
             query_resp.answer = interaction_ref.last_answer
             query_resp.reasoning = interaction_ref.last_reasoning
             query_resp.agent_name = interaction_ref.current_agent.agent_name
-            query_resp.success = str(interaction_ref.last_success)
+            query_resp.success = interaction_ref.last_success
             query_resp.blocks = blocks_json
-            
+
             query_resp_dict = {
                 "done": query_resp.done,
                 "answer": query_resp.answer,
@@ -107,7 +119,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
             app_logger.info("Query processed successfully")
             return JSONResponse(status_code=200, content=query_resp.jsonify())
-        
+
         except Exception as e:
             app_logger.error(f"An error occurred: {str(e)}")
             # sys.exit(1)  # 不应该在路由中退出应用
@@ -130,20 +142,17 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
         )
 
     @router.post("/find_knowledge_tool")
-    async def find_knowledge_tool(request: QuestionRequest):
+    async def find_knowledge_tool(request: QuestionRequest, http_request: Request):
         """根据用户问题查找最相关的知识及其对应的工具"""
-        app_logger.info(f"Finding knowledge tool for user: {request.userId} with question: {request.question}")
+        auth_header = http_request.headers.get("Authorization")
+        user = verify_firebase_token(auth_header)
+
+        user_id = user['uid']
+
+        app_logger.info(f"Finding knowledge tool for user: {user_id} with question: {request.question}")
 
         try:
             # 参数校验
-            if not request.userId or len(request.userId) > 50:
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "success": False,
-                        "message": "userId is required and must be no more than 50 characters"
-                    }
-                )
 
             if not request.question:
                 return JSONResponse(
@@ -156,7 +165,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
 
             # 调用knowledge.py中的方法获取知识项和工具信息
             knowledge_item, tool_info = get_knowledge_tool(
-                request.userId,
+                user_id,
                 request.question,
                 request.top_k,
                 0
@@ -199,7 +208,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
                 }
                 response_data["tool"] = tool_response
 
-            app_logger.info(f"Successfully found knowledge and tool for user: {request.userId}")
+            app_logger.info(f"Successfully found knowledge and tool for user: {user_id}")
             return JSONResponse(
                 status_code=200,
                 content=response_data
@@ -214,5 +223,89 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
                     "message": f"Internal server error: {str(e)}"
                 }
             )
+
+    @router.post("/query_stream")
+    async def process_query(request: QueryRequest, http_request: Request):
+        app_logger.info(f"Processing query_stream: {request.query}")
+
+        auth_header = http_request.headers.get("Authorization")
+        user = verify_firebase_token(auth_header)
+
+        user_id = user['uid']
+
+        allowed = check_and_increase_usage(user_id)
+        if not allowed:
+            return JSONResponse(status_code=429, content="Daily API usage limit exceeded (100/day)")
+
+        query_resp = {
+            "done" : "false",
+            "success" : "false"
+        }
+
+        # 如果没有提供 query_id，自动生成一个
+        if not request.query_id:
+            app_logger.warning("query id is none.")
+            return JSONResponse(status_code=429, content=json.dumps(query_resp))
+
+        if is_generating_flag:
+            app_logger.warning("Another query is being processed, please wait.")
+            return JSONResponse(status_code=429, content=json.dumps(query_resp))
+
+        async def generate():
+            general_agent = await create_agent_func()
+            queue = asyncio.Queue()
+            handler = SSECallbackHandler(queue)
+            openai_agent = await general_agent.create_agent(user_id, request.query, request.query_id, handler)
+
+            async def run_agent():
+                try:
+                    await general_agent.invoke_agent(openai_agent, handler)
+                    await queue.put({'type': 'end', 'content': '[DONE]'})
+                except Exception as e:
+                    app_logger.error(f"invoke agent fail. An error occurred: {str(e)}")
+                    await queue.put({'type': 'error', 'message': str(e)})
+                    await queue.put({'type': 'end'})
+                finally:
+                    handler.queue.put_nowait({'type': 'done'})
+
+            task = asyncio.create_task(run_agent())
+
+            try:
+                while True:
+                    event = await queue.get()
+                    if event['type'] == 'token':
+                        # 将token内容进行JSON编码，确保换行符等特殊字符被正确处理
+                        token_json = json.dumps(event['content'])
+                        yield f"data:{token_json}\n\n"
+
+                    if event['type'] == 'end':
+                        break
+            finally:
+                if not task.done():
+                    task.cancel()
+
+        return StreamingResponse(
+            generate(),
+            media_type="text/event-stream",
+        )
+
+    @router.get("/copiioai_statistics")
+    async def get_statistics():
+        """获取今日知识创建和用户提问统计"""
+        from datetime import datetime
+
+        # Mock 数据
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        stats = {
+            "date": today,
+            "knowledge_created": 42,  # 今日创建的知识数量
+            "user_questions": 156,  # 今日用户提问次数
+            "active_users": 23,  # 今日活跃用户数
+            "knowledge_tools_used": 18,  # 今日知识工具使用次数
+            "success_rate": "92.3%"  # 成功率
+        }
+
+        return JSONResponse(status_code=200, content=stats)
 
     return router

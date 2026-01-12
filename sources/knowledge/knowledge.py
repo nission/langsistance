@@ -3,7 +3,7 @@ import json
 import uuid
 from openai import OpenAI
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from pydantic import BaseModel
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -52,6 +52,7 @@ class KnowledgeItem(BaseModel):
     params: Optional[str] = None
     create_time: Optional[str] = None
     update_time: Optional[str] = None
+    extra_info: Optional[Dict[str, Any]] = None
 
 
 class ToolItem(BaseModel):
@@ -63,6 +64,8 @@ class ToolItem(BaseModel):
     status: Optional[bool]
     timeout: Optional[int]
     params: Optional[str] = None
+    create_time: Optional[str] = None
+    update_time: Optional[str] = None
 
 
 def get_embedding(text: str) -> List[float]:
@@ -174,32 +177,20 @@ def get_db_connection():
 def get_redis_connection():
     """创建并返回 Redis 连接"""
     # 优先从环境变量获取 Redis 配置
-    redis_url = os.getenv('REDIS_BASE_URL')
-    if redis_url:
-        # 解析 Redis URL
-        from urllib.parse import urlparse
-        parsed = urlparse(redis_url)
-        redis_host = parsed.hostname or 'localhost'
-        redis_port = parsed.port or 6379
-        redis_db = int(parsed.path.lstrip('/')) if parsed.path else 0
-        redis_password = parsed.password
-    else:
-        # 回退到原来的配置方式
-        redis_host = os.getenv('REDIS_HOST', 'localhost')
-        redis_port = int(os.getenv('REDIS_PORT', 6379))
-        redis_db = int(os.getenv('REDIS_DB', 0))
-        redis_password = os.getenv('REDIS_PASSWORD', None)
+    redis_host = os.getenv('REDIS_HOST')
+    redis_port = int(os.getenv('REDIS_PORT'))
+    logger.info(f"redis_host: {redis_host}, redis_port: {redis_port}")
+    try:
+        return redis.Redis(host=redis_host, port=redis_port, decode_responses=True, socket_connect_timeout=10, socket_timeout=10)
+    except Exception as e:
+        logger.error(f"Failed to create Redis connection: {str(e)}")
+        raise e
 
-    if redis_password:
-        return redis.Redis(host=redis_host, port=redis_port, db=redis_db, password=redis_password,
-                           decode_responses=True)
-    else:
-        return redis.Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
 
 
 def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
     """
-    根据用户ID从数据库查询有效的知识记录
+    根据用户ID从数据库查询有效的知识记录，包括用户拥有的知识和被授权的知识
 
     Args:
         user_id (str): 用户ID
@@ -207,31 +198,26 @@ def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
     Returns:
         List[KnowledgeItem]: 用户的知识记录列表
     """
-    # 这里需要实现数据库连接和查询逻辑
-    # 参考api.py中的get_db_connection方法和查询逻辑
-
     try:
         connection = get_db_connection()
 
         try:
             with connection.cursor() as cursor:
-                # 查询用户有效的知识记录 (status=1表示有效)
-                # 包括用户自己的知识和公开的知识
-                query_sql = """
-                            SELECT id, user_id, question, description, answer, public, model_name, tool_id, params, create_time, update_time
-                            FROM knowledge
-                            WHERE status = %s
-                               AND user_id = %s
-                            ORDER BY update_time DESC
-                            """
+                # 查询用户自己的知识记录 (status=1表示有效)
+                user_knowledge_sql = """
+                    SELECT id, user_id, question, description, answer, public, model_name, tool_id, params, create_time, update_time
+                    FROM knowledge
+                    WHERE status = %s
+                       AND user_id = %s
+                    ORDER BY update_time DESC
+                """
 
-                cursor.execute(query_sql, (1, user_id))
-                results = cursor.fetchall()
-                logger.info(f"results:{results}")
+                cursor.execute(user_knowledge_sql, (1, user_id))
+                user_knowledge_results = cursor.fetchall()
 
                 # 将查询结果转换为KnowledgeItem对象列表
                 knowledge_items = []
-                for row in results:
+                for row in user_knowledge_results:
                     knowledge_item = KnowledgeItem(
                         id=row['id'],
                         user_id=str(row['user_id']),
@@ -246,6 +232,7 @@ def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
                         update_time=row['update_time'].isoformat() if row['update_time'] else None
                     )
                     knowledge_items.append(knowledge_item)
+
                 return knowledge_items
         finally:
             connection.close()
@@ -253,7 +240,6 @@ def get_user_knowledge(user_id: str) -> List[KnowledgeItem]:
     except Exception as e:
         pretty_print(f"Error querying user knowledge: {str(e)}", color="error")
         return []
-
 
 
 def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_threshold: float = 0) -> Tuple[
@@ -404,3 +390,165 @@ def get_knowledge_tool(user_id: str, question: str, top_k: int = 3, similarity_t
     except Exception as e:
         logger.error(f"Error in find_knowledge_tool: {str(e)}")
         return None, None
+
+
+def create_tool_and_knowledge_records(tool_data: dict, knowledge_data: dict) -> dict:
+    """
+    创建工具和知识记录的核心功能
+
+    Args:
+        tool_data: 工具相关数据
+        knowledge_data: 知识相关数据
+
+    Returns:
+        dict: 包含操作结果的字典
+    """
+    connection = None
+    tool_id = None
+    knowledge_id = None
+
+    try:
+        # 获取数据库连接
+        connection = get_db_connection()
+
+        # 开始事务
+        connection.begin()
+
+        # 1. 创建 Tool
+        with connection.cursor() as cursor:
+            # 插入 Tool 数据
+            tool_sql = """
+                       INSERT INTO tools
+                       (user_id, title, description, url, push, status, timeout, params)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                       """
+            cursor.execute(tool_sql, (
+                tool_data['user_id'],
+                tool_data['title'],
+                tool_data['description'],
+                tool_data['url'],
+                tool_data['push'],
+                1,  # status
+                tool_data['timeout'],
+                tool_data['params']
+            ))
+
+            # 获取插入的 tool ID
+            tool_id = cursor.lastrowid
+            logger.info(f"Tool record created successfully with ID: {tool_id}")
+
+        # 2. 创建 Knowledge，使用刚刚创建的 tool_id
+        with connection.cursor() as cursor:
+            # 插入 Knowledge 数据，使用 tool_id
+            knowledge_sql = """
+                            INSERT INTO knowledge
+                            (user_id, question, description, answer, public, status, embedding_id, model_name, tool_id,
+                             params)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """
+            cursor.execute(knowledge_sql, (
+                knowledge_data['user_id'],
+                knowledge_data['question'],
+                knowledge_data['description'],
+                knowledge_data['answer'],
+                knowledge_data['public'],
+                1,  # status
+                knowledge_data['embedding_id'],
+                knowledge_data['model_name'],
+                tool_id,  # 使用刚刚创建的 tool_id
+                knowledge_data['params']
+            ))
+
+            # 获取插入的 knowledge ID
+            knowledge_id = cursor.lastrowid
+
+            # 计算并存储 embedding
+            query_embedding = get_embedding(knowledge_data['question'] + knowledge_data['answer'])
+
+            # 将 embedding 写入 Redis
+            try:
+                redis_conn = get_redis_connection()
+                # 使用记录ID作为键，将embedding存储到Redis中
+                redis_key = f"knowledge_embedding_{knowledge_id}"
+                redis_conn.set(redis_key, str(query_embedding))
+                logger.info(f"Embedding stored in Redis with key: {redis_key}")
+            except Exception as redis_error:
+                logger.error(f"Failed to store embedding in Redis: {str(redis_error)}")
+                # 注意：即使Redis存储失败，我们也不会中断主流程
+
+        # 提交事务
+        connection.commit()
+
+        logger.info(
+            f"Tool and knowledge records created successfully. Tool ID: {tool_id}, Knowledge ID: {knowledge_id}")
+        return {
+            "success": True,
+            "message": "Tool and knowledge records created successfully",
+            "tool_id": tool_id,
+            "knowledge_id": knowledge_id
+        }
+
+    except Exception as e:
+        logger.error(f"Error creating tool and knowledge records: {str(e)}")
+        if connection:
+            connection.rollback()
+        return {
+            "success": False,
+            "message": f"Internal server error: {str(e)}",
+            "tool_id": tool_id,
+            "knowledge_id": knowledge_id
+        }
+    finally:
+        if connection:
+            connection.close()
+
+
+def get_tool_by_id(tool_id: int) -> Optional[ToolItem]:
+    """
+    根据tool_id查询数据库tools表
+
+    Args:
+        tool_id (int): 工具ID
+
+    Returns:
+        Optional[ToolItem]: ToolItem对象，如果未找到则返回None
+    """
+    try:
+        connection = get_db_connection()
+
+        try:
+            with connection.cursor() as cursor:
+                # 查询工具信息
+                tool_query_sql = """
+                    SELECT id, user_id, title, description, url, push, public, status, timeout, params, create_time, update_time
+                    FROM tools
+                    WHERE id = %s AND status = 1
+                """
+                cursor.execute(tool_query_sql, (tool_id,))
+                tool_result = cursor.fetchone()
+
+                if tool_result:
+                    # 构建ToolItem对象
+                    tool_item = ToolItem(
+                        id=tool_result['id'],
+                        user_id=str(tool_result['user_id']),
+                        title=tool_result['title'],
+                        description=tool_result['description'],
+                        url=tool_result['url'],
+                        status=tool_result['status'],
+                        create_time=tool_result['create_time'].isoformat() if tool_result['create_time'] else None,
+                        update_time=tool_result['update_time'].isoformat() if tool_result['update_time'] else None,
+                        timeout=tool_result['timeout'],
+                        params=tool_result['params']
+                    )
+                    logger.info(f"Retrieved tool info for tool ID: {tool_id}")
+                    return tool_item
+                else:
+                    logger.warning(f"No tool found for tool ID: {tool_id}")
+                    return None
+        finally:
+            connection.close()
+
+    except Exception as e:
+        logger.error(f"Error retrieving tool by ID: {str(e)}")
+        return None

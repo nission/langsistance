@@ -5,7 +5,7 @@ import random
 from typing import List
 
 # from transformers import pipeline
-from adaptive_classifier import AdaptiveClassifier
+# from adaptive_classifier import AdaptiveClassifier
 
 from sources.agents.agent import Agent
 from sources.agents.code_agent import CoderAgent
@@ -44,21 +44,21 @@ class AgentRouter:
     #         "bart": pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
     #     }
 
-    def load_llm_router(self) -> AdaptiveClassifier:
-        """
-        Load the LLM router model.
-        returns:
-            AdaptiveClassifier: The loaded model
-        exceptions:
-            Exception: If the safetensors fails to load
-        """
-        path = "../llm_router" if __name__ == "__main__" else "./llm_router"
-        try:
-            animate_thinking("Loading LLM router model...", color="status")
-            talk_classifier = AdaptiveClassifier.from_pretrained(path)
-        except Exception as e:
-            raise Exception("Failed to load the routing model. Please run the dl_safetensors.sh script inside llm_router/ directory to download the model.")
-        return talk_classifier
+    # def load_llm_router(self) -> AdaptiveClassifier:
+    #     """
+    #     Load the LLM router model.
+    #     returns:
+    #         AdaptiveClassifier: The loaded model
+    #     exceptions:
+    #         Exception: If the safetensors fails to load
+    #     """
+    #     path = "../llm_router" if __name__ == "__main__" else "./llm_router"
+    #     try:
+    #         animate_thinking("Loading LLM router model...", color="status")
+    #         talk_classifier = AdaptiveClassifier.from_pretrained(path)
+    #     except Exception as e:
+    #         raise Exception("Failed to load the routing model. Please run the dl_safetensors.sh script inside llm_router/ directory to download the model.")
+    #     return talk_classifier
 
     # def get_device(self) -> str:
     #     if torch.backends.mps.is_available():
@@ -482,14 +482,8 @@ class AgentRouter:
         """
         
         try:
-            # 获取用户ID，这里假设使用默认用户ID，您可能需要根据实际情况修改
-            user_id = "111111111"
-
-            # 如果没有找到匹配的知识，则使用默认的选择方法
-            pretty_print("No matching knowledge found, using default agent selection.", color="warning")
             return self.agents[0], text
         except Exception as e:
-            pretty_print(f"Error building agent from knowledge base: {str(e)}", color="failure")
             self.logger.error(f"Error building agent from knowledge base: {str(e)}")
             # 出错时回退到默认的选择方法
             return self.agents[0], text

@@ -12,8 +12,8 @@ from ollama import Client as OllamaClient
 from openai import OpenAI
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.agents import create_openai_tools_agent,AgentExecutor
-from langchain.schema import SystemMessage, HumanMessage
+from langchain.agents import create_agent  # 更改导入
+# from langchain.schema import SystemMessage, HumanMessage
 
 from sources.logger import Logger
 from sources.utility import pretty_print, animate_thinking
@@ -71,7 +71,7 @@ class Provider:
             return "http://localhost", False
         return url, True
 
-    def respond(self, tools, history, verbose=True):
+    def respond(self, tools, history, verbose=True, callback_handler=None):
         """
         Use the choosen provider to generate text.
         """
@@ -79,7 +79,7 @@ class Provider:
         self.logger.info(f"Using provider: {self.provider_name} at {self.server_ip}")
         self.logger.info(f"history:{history}")
         try:
-            thought = llm(tools, history, verbose)
+            thought = llm(tools, history, verbose, callback_handler)
         except KeyboardInterrupt:
             self.logger.warning("User interrupted the operation with Ctrl+C")
             return "Operation interrupted by user. REQUEST_EXIT"
@@ -213,55 +213,38 @@ class Provider:
         thought = completion.choices[0].message
         return thought.content
 
-    def openai_fn(self, tools, history, verbose=False):
+    def openai_fn(self, tools, history, verbose=False, callback_handler=None):
         """
         Use openai to generate text.
         """
         self.logger.info(f"tools:{tools}")
         self.logger.info(f"history:{history}")
-        # client = OpenAI(api_key=self.api_key)
         llm = ChatOpenAI(
             model=self.model,
             api_key=self.api_key,
-            temperature=0
+            temperature=0,
+            callbacks=[callback_handler] if callback_handler else None
         )
-        # agent = llm.bind_tools(tools)
 
         # 定义一个提示模板，通常包含系统消息、历史消息、用户输入和Agent的临时思考区域
-        prompt = ChatPromptTemplate.from_messages([
-            SystemMessage(content=history[1]["content"]),  # 这里使用SystemMessage，内容不会被模板解析
+        # prompt = ChatPromptTemplate.from_messages([
+        #     SystemMessage(content=history[1]["content"]),  # 这里使用SystemMessage，内容不会被模板解析
             # MessagesPlaceholder 用于保留和注入对话历史（variable_name 需与调用时传入的键一致）
-            MessagesPlaceholder(variable_name="chat_history"),
+            # MessagesPlaceholder(variable_name="chat_history"),
             # HumanMessage 表示用户当前的输入（variable_name 需与调用时传入的键一致）
-            ("human", "{input}"),
-            MessagesPlaceholder("agent_scratchpad"),  # 用于存放Agent思考过程和工具调用的位置
-        ])
-        agent = create_openai_tools_agent(llm, tools, prompt)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)  # verbose=True 打印详细日志
-        response = agent_executor.invoke({"input": history[0]["content"], "chat_history": []})
-        # messages = [
-        #     SystemMessage(content=history["system"]),
-        #     HumanMessage(content=history["user"])
-        # ]
-
+        #     ("human", "{input}"),
+        #     MessagesPlaceholder("agent_scratchpad"),  # 用于存放Agent思考过程和工具调用的位置
+        # ])
         try:
-            # response = client.chat.completions.create(
-            #     model=self.model,
-            #     messages=history,
-            #     tools=tools,
-            #     temperature=0
-            # )
-            # response = agent.invoke(history)
+
+            agent = create_agent(llm, tools, system_prompt=history[1]["content"])
+            response = agent.invoke({"messages": [{"role": "user", "content": history[0]["content"]}]})
+
             self.logger.info(f"response:{response}")
             if response is None:
                 raise Exception("OpenAI response is empty.")
 
-            # if response.tool_calls:
-            #     print("模型请求调用工具:")
-            #     for tool_call in response.tool_calls:
-            #         self.logger.info(f"工具名称: {tool_call['name']}")
-            #         self.logger.info(f"工具参数: {tool_call['args']}")
-            thought = response["output"]
+            thought = response["messages"][-1].content
             if verbose:
                 print(thought)
             return thought
@@ -479,6 +462,35 @@ class Provider:
         except APIError as e:
             raise APIError(f"API error occurred: {str(e)}") from e
         return None
+
+    def openai_create(self, tools, history, callback_handler=None, verbose=False):
+        """
+        Use openai to generate text.
+        """
+        self.logger.info(f"create agent tools:{tools}")
+        self.logger.info(f"create agent history:{history}")
+        llm = ChatOpenAI(
+            model=self.model,
+            api_key=self.api_key,
+            temperature=0,
+            streaming=True,
+            callbacks=[callback_handler] if callback_handler else None
+        )
+
+        try:
+            return create_agent(llm, tools, system_prompt=history[1]["content"])
+        except Exception as e:
+            raise Exception(f"OpenAI API error: {str(e)}") from e
+
+    async def openai_invoke(self, agent, history, callback_handler=None):
+        """
+        Use openai to generate text.
+        """
+        self.logger.info(f"invoke agent history:{history}")
+        try:
+            await agent.ainvoke({"messages": [{"role": "user", "content": history[0]["content"]}]}, config={"callbacks": [callback_handler]})
+        except Exception as e:
+            raise e
 
     def test_fn(self, tools, history, verbose=True):
         """

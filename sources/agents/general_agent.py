@@ -9,7 +9,7 @@ from sources.tools.mcpFinder import MCP_finder
 from sources.memory import Memory
 from sources.logger import Logger
 
-from langchain.tools import Tool, StructuredTool
+from langchain_core.tools import StructuredTool
 
 import os
 import time
@@ -79,9 +79,29 @@ class GeneralAgent(Agent):
         """
         knowledge_item, tool_info = self.knowledgeTool
         self.logger.info(f"knowledge item:{knowledge_item} - tool:{tool_info}")
+
+        # 获取当前时间戳
+        current_timestamp = time.time()
+
+        # 转换为本地时间结构
+        local_time = time.localtime(current_timestamp)
+
+        # 格式化为字符串
+        time_str = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+
         if not tool_info:
             system_prompt = f"""
-            你是一个MCP智能助手，你找不到合适的工具帮助用户完成任务。提醒用户去社区查找能解决问题的工具
+            
+            You are an intelligent API-enabled assistant. Current time is {time_str}.
+            
+            If no relevant knowledge is available to complete the user’s task, clearly inform the user that no matching knowledge was found and suggest checking the community for shared knowledge or tools that may solve the problem.
+            
+            If a tool response indicates that the user is not authenticated, or returns a login page, inform the user that authentication is required before the task can be executed.
+            
+            In this case, always append the following tag at the end of your response:
+            
+            <Knowledge tool not logged in>
+            
             """
             return system_prompt
 
@@ -109,14 +129,21 @@ class GeneralAgent(Agent):
                 tool_params_info = f"工具参数: {tool_info.params}"
 
         system_prompt = f"""
-        你是一个MCP智能助手，你的任务是根据用户的问题和上下文，使用MCP服务器提供的工具来解决问题。
-        你需要使用的MCP工具是：
-        {tool_title}
-        功能是：
-        {tool_description}
-        {tool_params_info}
-        工具调用完成后基于结果给出最终答案。
-        如果不需要使用工具，请直接回答用户的问题。
+        You are an intelligent assistant capable of deciding when and how to use APIs to complete tasks.
+
+        Based on the user’s request and the available context, decide whether invoking a tool is necessary.
+
+        If a tool is required, use the following tool:
+
+        Tool: {tool_title}
+        Purpose: {tool_description}
+        Input parameters: {tool_params_info}
+
+        Execute the tool with the appropriate parameters and generate the final response strictly based on the tool’s output.
+
+        If the task can be completed without invoking the tool, respond directly to the user without calling any tool.
+
+        Do not fabricate tool results. Do not assume tool behavior beyond the provided output.
         """
         # return self.expand_prompt(system_prompt)
         return system_prompt
@@ -170,7 +197,7 @@ class GeneralAgent(Agent):
 
                             params_json = json.dumps(param_dict)
 
-                            redis_conn.set(redis_key, params_json)
+                            redis_conn.set(redis_key, params_json, ex=1200)
 
                             # 轮询读取tool_response_{query_id}
                             response_key = f"tool_response_{query_id}_{user_id}"
@@ -180,7 +207,7 @@ class GeneralAgent(Agent):
 
                             while elapsed < timeout:
                                 response_value = redis_conn.get(response_key)
-                                self.logger.info(f"tool response:{response_value}")
+
                                 if response_value is not None:
                                     # 成功获取到响应值
                                     return response_value
@@ -226,7 +253,7 @@ class GeneralAgent(Agent):
         self.memory.reset([])
         self.memory.push('user', user_prompt)
         self.memory.push('system', system_prompt)
-        self.logger.info(f"memory:{self.memory}")
+
         self.logger.info(f"memory.get():{self.memory.get()}")
         self.tools = await self.get_tools()
         working = True
@@ -241,6 +268,27 @@ class GeneralAgent(Agent):
             if len(self.blocks_result) == 0:
                 working = False
         return answer, reasoning
+
+    async def create_agent(self, user_id, prompt, query_id, callback_handler):
+        self.knowledgeTool = get_knowledge_tool(user_id,  prompt)
+        user_prompt = self.generate_user_prompt(prompt, user_id, query_id)
+        system_prompt = self.generate_system_prompt()
+        self.memory.reset([])
+        self.memory.push('user', user_prompt)
+        self.memory.push('system', system_prompt)
+
+        self.logger.info(f"memory.get():{self.memory.get()}")
+        self.tools = await self.get_tools()
+
+        return self.llm.openai_create(self.tools, self.memory.get(), callback_handler)
+
+
+    async def invoke_agent(self, agent, callback_handler):
+        self.logger.info(f"invoke agent memory:{self.memory.get()}")
+        try:
+            await self.llm.openai_invoke(agent, self.memory.get(), callback_handler)
+        except Exception as e:
+            raise e
 
 if __name__ == "__main__":
     pass

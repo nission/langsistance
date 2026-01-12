@@ -7,14 +7,13 @@ from sources.knowledge.knowledge import KnowledgeItem, ToolItem
 
 # Knowledge Models
 class KnowledgeCreateRequest(BaseModel):
-    userId: str
     question: str
-    description: str
     answer: str
-    public: bool
-    modelName: str
+    public: int
     toolId: int
     params: str
+    modelName: Optional[str] = None
+    description: Optional[str] = None
 
 class KnowledgeCreateResponse(BaseModel):
     success: bool
@@ -22,7 +21,6 @@ class KnowledgeCreateResponse(BaseModel):
     id: Optional[int] = None
 
 class KnowledgeDeleteRequest(BaseModel):
-    userId: str
     knowledgeId: int
 
 class KnowledgeDeleteResponse(BaseModel):
@@ -30,12 +28,11 @@ class KnowledgeDeleteResponse(BaseModel):
     message: str
 
 class KnowledgeUpdateRequest(BaseModel):
-    userId: str
     knowledgeId: int
     question: Optional[str] = None
     description: Optional[str] = None
     answer: Optional[str] = None
-    public: Optional[bool] = None
+    public: Optional[int] = None
     modelName: Optional[str] = None
     toolId: Optional[int] = None
     params: Optional[str] = None
@@ -51,7 +48,6 @@ class KnowledgeQueryResponse(BaseModel):
     total: int
 
 class KnowledgeCopyRequest(BaseModel):
-    userId: str
     knowledgeId: int
 
 class KnowledgeCopyResponse(BaseModel):
@@ -62,20 +58,17 @@ class KnowledgeCopyResponse(BaseModel):
 # Tool Models
 class ToolAndKnowledgeCreateRequest(BaseModel):
     # Tool fields
-    tool_userId: str
     tool_title: str
     tool_description: str
     tool_url: str
     tool_push: int
-    tool_public: bool
     tool_timeout: int
     tool_params: str
     # Knowledge fields
-    knowledge_userId: str
     knowledge_question: str
     knowledge_description: str
     knowledge_answer: str
-    knowledge_public: bool
+    knowledge_public: int
     knowledge_embeddingId: int
     knowledge_model_name: str
     knowledge_params: str
@@ -87,18 +80,17 @@ class ToolAndKnowledgeCreateResponse(BaseModel):
     knowledge_id: Optional[int] = None
 
 class ToolUpdateRequest(BaseModel):
-    userId: str
     toolId: int
     title: Optional[str] = None
     description: Optional[str] = None
-    public: Optional[str] = None
+    url: Optional[str] = None
+    params: Optional[str] = None
 
 class ToolUpdateResponse(BaseModel):
     success: bool
     message: str
 
 class ToolDeleteRequest(BaseModel):
-    userId: str
     toolId: int
 
 class ToolDeleteResponse(BaseModel):
@@ -113,7 +105,6 @@ class ToolQueryResponse(BaseModel):
 
 # Query Models
 class QuestionRequest(BaseModel):
-    userId: str
     question: str
     top_k: Optional[int] = 3
     similarity_threshold: Optional[float] = 0.7
@@ -127,7 +118,6 @@ class KnowledgeToolResponse(BaseModel):
 
 class ToolFetchRequest(BaseModel):
     query_id: str
-    userId: str
 
 class ToolFetchResponse(BaseModel):
     success: bool
@@ -136,9 +126,38 @@ class ToolFetchResponse(BaseModel):
 
 class ToolResponseRequest(BaseModel):
     query_id: str
-    userId: str
     tool_response: dict
 
 class ToolResponseResponse(BaseModel):
     success: bool
     message: str
+
+
+class OpenAPISpecRequest(BaseModel):
+    """
+    OpenAPI规范配置请求模型
+    """
+    spec_format: str  # "json" 或 "yaml"
+    spec_content: str  # OpenAPI规范内容
+
+
+class OpenAPISpecResponse(BaseModel):
+    """
+    OpenAPI规范配置响应模型
+    """
+    success: bool
+    message: str
+    tool_id: Optional[int] = None
+
+class ToolCreateRequest(BaseModel):
+    # Tool fields
+    tool_title: str
+    tool_description: str
+    tool_url: str
+    tool_params: str
+    tool_timeout: Optional[int] = None
+
+class ToolCreateResponse(BaseModel):
+    success: bool
+    message: str
+    tool_id: Optional[int] = None
