@@ -300,6 +300,7 @@ def register_core_routes(app_logger, interaction_ref, query_resp_history_ref, co
         stats = {
             "date": today,
             "knowledge_created": 42,  # 今日创建的知识数量
+            "knowledge_shared": 39,  # 今日创建的知识数量
             "user_questions": 156,  # 今日用户提问次数
             "active_users": 23,  # 今日活跃用户数
             "knowledge_tools_used": 18,  # 今日知识工具使用次数
